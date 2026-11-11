@@ -1,0 +1,35 @@
+/* ==========================================================================
+   PLOTTER MACHINE ANIMATION & STROKE STYLES
+   ========================================================================== */
+
+/* Neon laser active drawing glow on SVG path */
+.drawing-active-stroke {
+  filter: drop-shadow(0 0 6px #00ffc2) drop-shadow(0 0 12px #00e5ff) !important;
+  stroke: #00ffc2 !important;
+  stroke-width: 2.5px !important;
+}
+
+/* Card Plotting Active State */
+.svg-card.is-plotting {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px var(--accent-color), 0 8px 28px rgba(99, 102, 241, 0.3);
+}
+
+.svg-card.is-plotting .btn-plot-action {
+  background: var(--accent-color);
+  color: #ffffff;
+  border-color: var(--accent-color);
+  animation: pulse-plot 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse-plot {
+  0% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(99, 102, 241, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+  }
+}

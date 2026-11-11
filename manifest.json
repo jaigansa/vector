@@ -1,0 +1,19 @@
+{
+  "name": "Vector — SVG Artwork & Plotter Studio",
+  "short_name": "Vector",
+  "description": "Mobile & tablet-optimized SVG vector library viewer, inspector and exporter",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f8fafc",
+  "theme_color": "#ffffff",
+  "categories": ["utilities", "design", "developer"],
+  "icons": [
+    {
+      "src": "svgs/tech-software/undraw-coding-developer.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Vector">
+  <title>Vector — SVG Artwork & Plotter Studio</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="svgs/nature-scenery/aurora-borealis-night.svg">
+  
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/viewer.css">
+</head>
+<body>
+  <div id="app-container">
+    
+    <!-- Main Content Wrapper (Full-width clean layout) -->
+    <main class="content-wrapper">
+      
+      <!-- Top Header -->
+      <header class="app-header">
+        <div class="brand">
+          <div class="brand-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+          </div>
+          <span>Vector</span>
+        </div>
+
+        <div class="header-actions">
+          <button class="icon-btn" id="btn-theme-toggle" title="Toggle Dark/Light Theme">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="4"/>
+              <path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41m14.14-14.14l-1.41 1.41"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Search Section with Integrated Category Dropdown -->
+      <section class="search-filter-section">
+        <div class="search-input-wrapper">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" id="search-input" class="search-input" placeholder="Search vector illustrations..." autocomplete="off" autocorrect="off" autocapitalize="off">
+          <button id="search-clear-btn" class="search-clear-btn" title="Clear search">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+
+          <div class="search-divider"></div>
+
+          <!-- Category Dropdown on the right -->
+          <div class="category-dropdown-wrapper" id="category-dropdown-wrapper">
+            <button type="button" class="category-dropdown-btn" id="category-dropdown-btn" aria-haspopup="listbox" aria-expanded="false" title="Filter by Category">
+              <span class="category-btn-icon" id="category-btn-icon">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                </svg>
+              </span>
+              <span class="category-current-label" id="category-current-label">All Artworks</span>
+              <svg class="dropdown-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <div class="category-dropdown-menu" id="category-dropdown-menu" role="listbox">
+              <!-- Dynamically populated category items -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Main Scrollable Grid Area -->
+      <div class="main-viewport" id="main-viewport">
+        <div class="svg-grid" id="svg-grid">
+          <!-- Dynamic SVG Artwork cards rendered here -->
+        </div>
+
+        <div class="empty-state" id="empty-state" style="display: none;">
+          <div class="empty-state-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+          </div>
+          <h3>No Artworks Found</h3>
+          <p>Try searching for another style or term.</p>
+        </div>
+      </div>
+
+      <!-- Mobile Thumb-Friendly Bottom Navigation -->
+      <nav class="bottom-nav-bar">
+        <button class="nav-tab-btn active" data-tab="library">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+          </svg>
+          <span>Gallery</span>
+        </button>
+        <button class="nav-tab-btn" data-tab="favorites">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+          <span>Favorites</span>
+        </button>
+      </nav>
+
+    </main>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Application Scripts -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
