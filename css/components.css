@@ -378,7 +378,7 @@
 /* Toast Notifications */
 .toast-container {
   position: fixed;
-  bottom: calc(var(--bottom-bar-height) + var(--safe-bottom) + 16px);
+  bottom: calc(var(--safe-bottom) + 16px);
   left: 50%;
   transform: translateX(-50%);
   display: flex;

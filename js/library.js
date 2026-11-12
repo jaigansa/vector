@@ -1,5 +1,5 @@
 /**
- * SVG Vector Artwork Library & Palette Extractor
+ * SVG Vector Artwork Library Loader & Metadata Parser
  */
 
 import { Storage } from './storage.js';
@@ -7,26 +7,8 @@ import { Storage } from './storage.js';
 export class SVGLibrary {
   constructor() {
     this.items = [];
-    this.categories = ['All Artworks'];
     this.discoveredCategories = [];
     this.hasApiServer = false;
-  }
-
-  extractPalette(content) {
-    const colors = new Set();
-    const hexMatches = content.match(/#(?:[0-9a-fA-F]{3}){1,2}\b/g) || [];
-    for (const h of hexMatches) {
-      if (!['#000000', '#ffffff', '#000', '#fff'].includes(h.toLowerCase())) {
-        colors.add(h.toLowerCase());
-      }
-      if (colors.size >= 5) break;
-    }
-    if (colors.size === 0) {
-      colors.add('#6366f1');
-      colors.add('#ec4899');
-      colors.add('#06b6d4');
-    }
-    return Array.from(colors);
   }
 
   parseSVGMetadata(name, content, explicitCategory = null, relPath = null) {
@@ -52,13 +34,6 @@ export class SVGLibrary {
       if (hMatch && !isNaN(parseFloat(hMatch[1]))) height = parseFloat(hMatch[1]);
     }
 
-    // Count vector elements
-    const elementMatches = content.match(/<(path|circle|rect|polygon|polyline|line|ellipse)\b/gi) || [];
-    const pathCount = elementMatches.length || 1;
-
-    // Extract color palette
-    const palette = this.extractPalette(content);
-
     return {
       id,
       name,
@@ -66,12 +41,9 @@ export class SVGLibrary {
       displayName: name.replace(/\.svg$/i, '').replace(/[-_]/g, ' '),
       content: content.trim(),
       sizeBytes,
-      sizeFormatted: sizeBytes < 1024 ? `${sizeBytes} B` : `${(sizeBytes / 1024).toFixed(1)} KB`,
       viewBox,
       width,
       height,
-      pathCount,
-      palette,
       category: explicitCategory || 'General'
     };
   }
@@ -129,17 +101,5 @@ export class SVGLibrary {
 
     this.items = svgsFound;
     return this.items;
-  }
-
-  addItem(name, content, category = null, path = null) {
-    const item = this.parseSVGMetadata(name, content, category, path);
-    const existingIdx = this.items.findIndex(i => i.id === item.id);
-    if (existingIdx >= 0) {
-      this.items[existingIdx] = item;
-    } else {
-      this.items.unshift(item);
-    }
-    Storage.saveUserUpload(item);
-    return item;
   }
 }

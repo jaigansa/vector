@@ -31,10 +31,6 @@ export class SVGViewer {
     this.isRestored = true;
   }
 
-  setSpeed(speedVal) {
-    this.animSpeed = speedVal;
-  }
-
   getPinStrokeWidth(svg) {
     let vbWidth = 800;
     const vb = svg?.getAttribute('viewBox');

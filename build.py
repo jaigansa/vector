@@ -7,9 +7,7 @@ Ensures any shapes/paths lacking stroke width and color in original SVGs have id
 
 import json
 import os
-import re
 import sys
-import xml.etree.ElementTree as ET
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SVG_DIR = os.path.join(BASE_DIR, "svgs")
