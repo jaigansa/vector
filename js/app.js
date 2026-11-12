@@ -29,7 +29,7 @@ class App {
     this.toastContainer = document.getElementById('toast-container');
 
     this.bindEvents();
-    this.registerServiceWorker();
+    this.cleanupServiceWorker();
 
     // Load SVG items & render dynamic category dropdown in searchbar
     await this.library.load();
@@ -423,13 +423,18 @@ class App {
     }
   }
 
-  registerServiceWorker() {
-    if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-      navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
-        .then(reg => {
-          reg.update().catch(() => {});
-        })
-        .catch(() => {});
+  cleanupServiceWorker() {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        for (const registration of registrations) {
+          registration.unregister();
+        }
+      }).catch(() => {});
+    }
+    if ('caches' in window) {
+      caches.keys().then(keys => {
+        keys.forEach(key => caches.delete(key));
+      }).catch(() => {});
     }
   }
 }

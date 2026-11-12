@@ -38,4 +38,4 @@ Just drop `.svg` files into category folders inside `svgs/` (e.g. `svgs/illustra
 
 - **Frontend**: Vanilla HTML5, CSS3, JavaScript (no npm build steps or external dependencies).
 - **Backend**: Built-in Python 3 HTTP server (`server.py`).
-- **PWA Ready**: Offline caching with service worker support.
+- **PWA Ready**: Installable webapp with standalone display.
