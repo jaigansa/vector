@@ -17,7 +17,7 @@ Open **[http://localhost:8080](http://localhost:8080)** in your browser (or `htt
 ## 🚀 Key Features
 
 - **Artwork Gallery**: Browse vector illustrations by category and instant search.
-- **Plotter Simulation**: Watch artworks drawn stroke-by-stroke with glowing mechanical path tracing, faithfully showing the original SVG upon completion.
+- **Interactive Draw Slider & Plotter**: Scrub and draw vector artworks at any speed with the real-time synchronized draw slider, or play the automatic stroke-by-stroke mechanical path tracing animation. Original SVG faithfully displays upon completion.
 - **Multi-Format Export**: Quick three-dot (⋮) card menu to download clean **SVG**, AutoCAD **DXF** (ready for CNC plotters, laser cutters, vinyl cutters), and high-resolution **PNG**.
 - **Dynamic Categories**: Automatically discovers category folders inside `svgs/` and syncs with the search dropdown.
 - **Clean Light Theme**: Distraction-free, high-contrast presentation designed for crisp vector artwork display.

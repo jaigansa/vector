@@ -16,7 +16,7 @@
   box-shadow: 0 0 0 2px var(--accent-color), 0 8px 24px rgba(99, 102, 241, 0.25);
 }
 
-.svg-card.is-plotting .btn-plot-action {
+.svg-card.is-plotting .btn-plot-play {
   background: var(--accent-color);
   color: #ffffff;
   border-color: var(--accent-color);

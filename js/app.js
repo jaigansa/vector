@@ -263,12 +263,19 @@ class App {
           <div class="svg-card-info">
             <span class="svg-card-name" title="${item.displayName}">${item.displayName}</span>
             <div class="card-bottom-actions">
-              <button class="btn-card-action btn-plot-action" data-action="plot-draw" data-id="${item.id}" title="Simulate CNC Plotter Draw">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
-                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              <button class="btn-card-action btn-plot-play" data-action="toggle-play" data-id="${item.id}" title="Play / Pause Draw Animation" aria-label="Play animation">
+                <svg class="icon-play" viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
+                  <polygon points="6 4 19 12 6 20 6 4"></polygon>
                 </svg>
-                <span>Plot</span>
+                <svg class="icon-pause" viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
+                  <rect x="6" y="5" width="4" height="14" rx="1"></rect>
+                  <rect x="14" y="5" width="4" height="14" rx="1"></rect>
+                </svg>
               </button>
+              <div class="plot-slider-wrapper">
+                <input type="range" class="plot-draw-slider" min="0" max="100" value="0" step="0.5" data-id="${item.id}" title="Draw progression" aria-label="Draw progression slider" style="--slider-pct: 0%;">
+                <span class="plot-slider-pct">0%</span>
+              </div>
               <div class="card-menu-wrapper">
                 <button class="btn-card-action btn-menu-trigger" data-action="toggle-menu" data-id="${item.id}" title="Export and more options" aria-label="More options" aria-haspopup="true" aria-expanded="false">
                   <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
@@ -304,17 +311,37 @@ class App {
       `;
     }).join('');
 
-    // Attach card click handlers
+    // Attach card click & slider handlers
     this.grid.querySelectorAll('.svg-card').forEach(card => {
       const id = card.dataset.id;
       const item = this.filteredItems.find(i => i.id === id);
+
+      // Slider interactive scrub handlers
+      const slider = card.querySelector('.plot-draw-slider');
+      const pctLabel = card.querySelector('.plot-slider-pct');
+
+      slider?.addEventListener('input', (e) => {
+        e.stopPropagation();
+        const val = parseFloat(slider.value) || 0;
+        slider.style.setProperty('--slider-pct', `${val}%`);
+        if (pctLabel) pctLabel.textContent = `${Math.round(val)}%`;
+        this.viewer.scrubCardPlot(card, item, val / 100);
+      });
+
+      slider?.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+      });
+
+      slider?.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
 
       card.addEventListener('click', (e) => {
         const actionBtn = e.target.closest('[data-action]');
         if (actionBtn) {
           e.stopPropagation();
           const action = actionBtn.dataset.action;
-          if (action === 'plot-draw') {
+          if (action === 'toggle-play') {
             this.closeAllCardMenus();
             this.triggerHaptic();
             this.viewer.toggleCardPlot(card, item);
@@ -351,14 +378,14 @@ class App {
           return;
         }
 
-        // Clicking inside dropdown or on card when menu is open
-        if (e.target.closest('.card-actions-dropdown')) return;
+        // Clicking inside dropdown, slider, or when menu is open
+        if (e.target.closest('.card-actions-dropdown') || e.target.closest('.plot-slider-wrapper')) return;
         if (card.classList.contains('menu-open')) {
           this.closeAllCardMenus();
           return;
         }
 
-        // Clicking on card preview or body triggers plot animation for this card
+        // Clicking on card preview or body triggers play/pause animation for this card
         this.closeAllCardMenus();
         this.triggerHaptic();
         this.viewer.toggleCardPlot(card, item);
