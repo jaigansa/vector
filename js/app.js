@@ -259,7 +259,6 @@ class App {
         <div class="svg-card" data-id="${item.id}">
           <div class="svg-card-preview">
             ${item.content}
-            <span class="artwork-badge">${item.category}</span>
           </div>
           <div class="svg-card-info">
             <span class="svg-card-name" title="${item.displayName}">${item.displayName}</span>
