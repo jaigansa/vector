@@ -19,10 +19,6 @@ class App {
   }
 
   async init() {
-    // Apply saved theme
-    const theme = Storage.getTheme() || 'light';
-    Storage.setTheme(theme);
-
     // Initialize viewer
     this.viewer = new SVGViewer(this);
 
@@ -31,7 +27,6 @@ class App {
     this.emptyState = document.getElementById('empty-state');
     this.searchInput = document.getElementById('search-input');
     this.searchClearBtn = document.getElementById('search-clear-btn');
-    this.themeToggleBtn = document.getElementById('btn-theme-toggle');
     this.toastContainer = document.getElementById('toast-container');
 
     this.bindEvents();
@@ -218,15 +213,6 @@ class App {
       this.searchClearBtn.classList.remove('visible');
       this.filterAndRender();
       this.searchInput.focus();
-    });
-
-    // Theme Toggle
-    this.themeToggleBtn?.addEventListener('click', () => {
-      const current = document.documentElement.getAttribute('data-theme') || 'light';
-      const next = current === 'dark' ? 'light' : 'dark';
-      Storage.setTheme(next);
-      this.triggerHaptic();
-      this.showToast(`Switched to ${next} mode`);
     });
 
     // Bottom Navigation Tabs

@@ -99,16 +99,21 @@ export function ensureIdleStrokes(svgContent) {
 
       if (!hasS) {
         modified = true;
-        if (fill && fill.startsWith('#') && (fill.length === 4 || fill.length === 7)) {
-          el.setAttribute('stroke', dominantStroke || darkenHex(fill, 0.75));
-        } else {
-          el.setAttribute('stroke', fallbackStroke);
+        const newStroke = (fill && fill.startsWith('#') && (fill.length === 4 || fill.length === 7))
+          ? (dominantStroke || darkenHex(fill, 0.75))
+          : fallbackStroke;
+        el.setAttribute('stroke', newStroke);
+        if (style.includes('stroke:')) {
+          el.style.stroke = newStroke;
         }
       }
 
       if (!hasSw) {
         modified = true;
         el.setAttribute('stroke-width', fallbackWidth);
+        if (style.includes('stroke-width:')) {
+          el.style.strokeWidth = fallbackWidth;
+        }
       }
 
       if (!el.hasAttribute('stroke-linecap') && !style.includes('stroke-linecap')) {

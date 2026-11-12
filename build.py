@@ -104,13 +104,20 @@ def ensure_idle_strokes(xml_str):
             if not has_s:
                 modified = True
                 if fill and fill.startswith("#") and len(fill) in (4, 7):
-                    elem.attrib["stroke"] = dominant_stroke or darken_hex(fill, 0.75)
+                    new_stroke = dominant_stroke or darken_hex(fill, 0.75)
                 else:
-                    elem.attrib["stroke"] = fallback_stroke
+                    new_stroke = fallback_stroke
+                elem.attrib["stroke"] = new_stroke
+                if "stroke" in style_dict:
+                    style_dict["stroke"] = new_stroke
+                    elem.attrib["style"] = ";".join(f"{k}:{v}" for k, v in style_dict.items())
 
             if not has_sw:
                 modified = True
                 elem.attrib["stroke-width"] = fallback_width
+                if "stroke-width" in style_dict:
+                    style_dict["stroke-width"] = fallback_width
+                    elem.attrib["style"] = ";".join(f"{k}:{v}" for k, v in style_dict.items())
 
             if "stroke-linecap" not in elem.attrib and "stroke-linecap" not in style_dict:
                 elem.attrib["stroke-linecap"] = "round"

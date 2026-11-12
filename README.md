@@ -23,7 +23,7 @@ Open **[http://localhost:8080](http://localhost:8080)** in your browser (or `htt
   - **DXF**: Export AutoCAD R12 DXF format ready for CNC plotters, laser cutters, and vinyl cutters.
   - **PNG**: Export high-resolution raster images.
 - **Dynamic Categories**: Automatically discovers category folders inside `svgs/` and syncs with the search dropdown.
-- **Dark & Light Mode**: Clean theme toggle with persistent preferences.
+- **Clean Light Theme**: Distraction-free, high-contrast presentation designed for crisp vector artwork display.
 - **Mobile & Tablet Ergonomics**: Responsive grid layout and touch-friendly navigation.
 
 ---

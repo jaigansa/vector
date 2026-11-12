@@ -4,8 +4,7 @@
 
 const STORAGE_KEYS = {
   FAVORITES: 'vector_favorites_v1',
-  UPLOADS: 'vector_user_uploads_v1',
-  THEME: 'vector_theme_preference'
+  UPLOADS: 'vector_user_uploads_v1'
 };
 
 export const Storage = {
@@ -62,14 +61,5 @@ export const Storage = {
     } catch (e) {
       console.warn('Storage limit reached, could not persist upload', e);
     }
-  },
-
-  getTheme() {
-    return localStorage.getItem(STORAGE_KEYS.THEME) || 'light';
-  },
-
-  setTheme(theme) {
-    localStorage.setItem(STORAGE_KEYS.THEME, theme);
-    document.documentElement.setAttribute('data-theme', theme);
   }
 };
