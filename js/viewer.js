@@ -3,8 +3,6 @@
  * Performs mechanical stroke-by-stroke draw animation followed by sequential color fill bloom.
  */
 
-import { darkenHex } from './library.js';
-
 const NEON_PALETTE = [
   { stroke: '#00f5ff', glow: 'rgba(0, 245, 255, 0.7)' },   // Electric Cyan
   { stroke: '#39ff14', glow: 'rgba(57, 255, 20, 0.7)' },   // Neon Lime
@@ -66,23 +64,36 @@ export class SVGViewer {
         } else {
           d.el.removeAttribute('style');
         }
-        if (d.origFill) d.el.setAttribute('fill', d.origFill);
-        if (d.origFillOpacity) d.el.setAttribute('fill-opacity', d.origFillOpacity);
+        if (d.origFill) {
+          d.el.setAttribute('fill', d.origFill);
+        } else {
+          d.el.removeAttribute('fill');
+        }
+        if (d.origFillOpacity) {
+          d.el.setAttribute('fill-opacity', d.origFillOpacity);
+        } else {
+          d.el.removeAttribute('fill-opacity');
+        }
 
-        const finalStroke = (d.origStroke && d.origStroke !== 'none' && d.origStroke !== 'transparent')
-          ? d.origStroke
-          : (d.idleStroke || '#1e293b');
-        const finalStrokeWidth = (d.origStrokeWidth && d.origStrokeWidth !== '0' && d.origStrokeWidth !== '0px')
-          ? d.origStrokeWidth
-          : (d.idleStrokeWidth || '1.5px');
+        if (d.hasOriginalStroke) {
+          if (d.explicitStroke) d.el.setAttribute('stroke', d.origStroke);
+          if (d.origStrokeWidth) d.el.setAttribute('stroke-width', d.origStrokeWidth);
+          if (d.origStrokeLinecap) d.el.setAttribute('stroke-linecap', d.origStrokeLinecap);
+          if (d.origStrokeLinejoin) d.el.setAttribute('stroke-linejoin', d.origStrokeLinejoin);
+          d.el.style.stroke = d.origStroke || '';
+          d.el.style.strokeWidth = d.origStrokeWidth || '';
+          d.el.style.strokeLinecap = d.origStrokeLinecap || '';
+          d.el.style.strokeLinejoin = d.origStrokeLinejoin || '';
+        } else {
+          // If the original file did not have stroke, do not stroke it after draw animation
+          d.el.removeAttribute('stroke');
+          d.el.removeAttribute('stroke-width');
+          d.el.style.stroke = 'transparent';
+          d.el.style.strokeWidth = '0px';
+        }
 
-        d.el.setAttribute('stroke', finalStroke);
-        d.el.setAttribute('stroke-width', finalStrokeWidth);
-        d.el.setAttribute('stroke-linecap', d.origStrokeLinecap || 'round');
-        d.el.setAttribute('stroke-linejoin', d.origStrokeLinejoin || 'round');
-
-        d.el.style.stroke = finalStroke;
-        d.el.style.strokeWidth = finalStrokeWidth;
+        d.el.style.fill = '';
+        d.el.style.fillOpacity = d.origFillOpacity || '';
         d.el.style.strokeDasharray = 'none';
         d.el.style.strokeDashoffset = 'none';
         d.el.style.visibility = 'visible';
@@ -140,15 +151,6 @@ export class SVGViewer {
 
     if (this.animElements.length === 0) return;
 
-    let dominantStroke = null;
-    let dominantWidth = null;
-    for (const el of this.animElements) {
-      const s = el.getAttribute('stroke');
-      const sw = el.getAttribute('stroke-width');
-      if (s && s !== 'none' && s !== 'transparent' && !dominantStroke) dominantStroke = s;
-      if (sw && sw !== '0' && sw !== '0px' && !dominantWidth) dominantWidth = sw;
-    }
-
     this.animOriginalData = this.animElements.map(el => {
       const origFill = el.getAttribute('fill') || '';
       const origFillOpacity = el.getAttribute('fill-opacity') || '';
@@ -158,20 +160,26 @@ export class SVGViewer {
       const origStrokeLinejoin = el.getAttribute('stroke-linejoin') || '';
       const origStyle = el.getAttribute('style') || '';
 
-      let idleStroke = origStroke;
-      let idleStrokeWidth = origStrokeWidth;
-      if (!idleStroke || idleStroke === 'none' || idleStroke === 'transparent') {
-        if (dominantStroke) {
-          idleStroke = dominantStroke;
-        } else if (origFill && origFill.startsWith('#') && (origFill.length === 4 || origFill.length === 7)) {
-          idleStroke = darkenHex(origFill, 0.75);
-        } else {
-          idleStroke = '#1e293b';
+      const explicitStroke = el.hasAttribute('stroke') && origStroke !== '' && origStroke !== 'none' && origStroke !== 'transparent';
+      let styleStroke = false;
+      if (origStyle) {
+        const sm = origStyle.match(/(?:^|;)\s*stroke\s*:\s*([^;]+)/i);
+        if (sm && sm[1].trim() !== 'none' && sm[1].trim() !== 'transparent') {
+          styleStroke = true;
         }
       }
-      if (!idleStrokeWidth || idleStrokeWidth === '0' || idleStrokeWidth === '0px') {
-        idleStrokeWidth = dominantWidth || '1.5px';
+      let inheritedStroke = false;
+      if (!explicitStroke && !styleStroke) {
+        const pStrokeEl = el.parentElement?.closest('[stroke]');
+        if (pStrokeEl) {
+          const ps = pStrokeEl.getAttribute('stroke');
+          if (ps && ps !== 'none' && ps !== 'transparent') {
+            inheritedStroke = true;
+          }
+        }
       }
+
+      const hasOriginalStroke = explicitStroke || styleStroke || inheritedStroke;
 
       return {
         el,
@@ -182,8 +190,8 @@ export class SVGViewer {
         origStrokeLinecap,
         origStrokeLinejoin,
         origStyle,
-        idleStroke,
-        idleStrokeWidth
+        hasOriginalStroke,
+        explicitStroke
       };
     });
 
@@ -359,17 +367,15 @@ export class SVGViewer {
           el.style.fillOpacity = '1';
         }
 
-        const strokeColor = (orig.origStroke && orig.origStroke !== 'none' && orig.origStroke !== 'transparent')
-          ? orig.origStroke
-          : (orig.idleStroke || '#1e293b');
-        const strokeW = (orig.origStrokeWidth && orig.origStrokeWidth !== '0' && orig.origStrokeWidth !== '0px')
-          ? orig.origStrokeWidth
-          : (orig.idleStrokeWidth || '1.5px');
-
-        el.style.stroke = strokeColor;
-        el.style.strokeWidth = strokeW;
-        el.style.strokeLinecap = orig.origStrokeLinecap || 'round';
-        el.style.strokeLinejoin = orig.origStrokeLinejoin || 'round';
+        if (!orig.hasOriginalStroke) {
+          el.style.stroke = 'transparent';
+          el.style.strokeWidth = '0px';
+        } else {
+          el.style.stroke = orig.origStroke || '';
+          el.style.strokeWidth = orig.origStrokeWidth || '1px';
+          el.style.strokeLinecap = orig.origStrokeLinecap || 'round';
+          el.style.strokeLinejoin = orig.origStrokeLinejoin || 'round';
+        }
 
         if (i % 2 === 0) this.app.triggerHaptic();
 
