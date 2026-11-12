@@ -21,12 +21,7 @@ export class SVGViewer {
     this.animSpeed = speedVal;
   }
 
-  stopPlotterAnimation() {
-    if (this.currentTimer) {
-      clearTimeout(this.currentTimer);
-      this.currentTimer = null;
-    }
-
+  restoreOriginalAttributes() {
     if (this.animOriginalData?.length > 0) {
       this.animOriginalData.forEach(d => {
         if (d.origStyle) {
@@ -38,9 +33,28 @@ export class SVGViewer {
         if (d.origFillOpacity) d.el.setAttribute('fill-opacity', d.origFillOpacity);
         if (d.origStroke) d.el.setAttribute('stroke', d.origStroke);
         if (d.origStrokeWidth) d.el.setAttribute('stroke-width', d.origStrokeWidth);
+        if (d.origStrokeLinecap) {
+          d.el.setAttribute('stroke-linecap', d.origStrokeLinecap);
+        } else {
+          d.el.removeAttribute('stroke-linecap');
+        }
+        if (d.origStrokeLinejoin) {
+          d.el.setAttribute('stroke-linejoin', d.origStrokeLinejoin);
+        } else {
+          d.el.removeAttribute('stroke-linejoin');
+        }
         d.el.classList.remove('drawing-active-stroke');
       });
     }
+  }
+
+  stopPlotterAnimation() {
+    if (this.currentTimer) {
+      clearTimeout(this.currentTimer);
+      this.currentTimer = null;
+    }
+
+    this.restoreOriginalAttributes();
 
     if (this.activeCard) {
       this.activeCard.classList.remove('is-plotting');
@@ -86,10 +100,12 @@ export class SVGViewer {
       origFillOpacity: el.getAttribute('fill-opacity') || '',
       origStroke: el.getAttribute('stroke') || '',
       origStrokeWidth: el.getAttribute('stroke-width') || '',
+      origStrokeLinecap: el.getAttribute('stroke-linecap') || '',
+      origStrokeLinejoin: el.getAttribute('stroke-linejoin') || '',
       origStyle: el.getAttribute('style') || ''
     }));
 
-    // Setup initial mechanical state: transparent fills, hidden strokes prepared for drawing
+    // Setup initial state: rounded caps & joins, transparent fills, hidden strokes prepared for drawing
     this.animElements.forEach((el, i) => {
       let len = 600;
       try {
@@ -126,7 +142,9 @@ export class SVGViewer {
       el.style.fill = 'transparent';
       el.style.fillOpacity = '0';
       el.style.stroke = strokeColor;
-      el.style.strokeWidth = '2px';
+      el.style.strokeWidth = '2.5px';
+      el.style.strokeLinecap = 'round';
+      el.style.strokeLinejoin = 'round';
       el.style.strokeDasharray = `${len} ${len}`;
       el.style.strokeDashoffset = `${len}`;
       el.style.visibility = 'hidden';
@@ -230,6 +248,8 @@ export class SVGViewer {
         } else {
           el.style.stroke = orig.origStroke;
           el.style.strokeWidth = orig.origStrokeWidth || '1px';
+          el.style.strokeLinecap = orig.origStrokeLinecap || 'round';
+          el.style.strokeLinejoin = orig.origStrokeLinejoin || 'round';
         }
 
         if (i % 2 === 0) this.app.triggerHaptic();
@@ -248,18 +268,7 @@ export class SVGViewer {
     this.animPhase = 3;
     this.isPlotting = false;
 
-    // Restore pristine original attributes
-    this.animOriginalData?.forEach(d => {
-      if (d.origStyle) {
-        d.el.setAttribute('style', d.origStyle);
-      } else {
-        d.el.removeAttribute('style');
-      }
-      if (d.origFill) d.el.setAttribute('fill', d.origFill);
-      if (d.origFillOpacity) d.el.setAttribute('fill-opacity', d.origFillOpacity);
-      if (d.origStroke) d.el.setAttribute('stroke', d.origStroke);
-      if (d.origStrokeWidth) d.el.setAttribute('stroke-width', d.origStrokeWidth);
-    });
+    this.restoreOriginalAttributes();
 
     if (this.activeCard) {
       this.activeCard.classList.remove('is-plotting');

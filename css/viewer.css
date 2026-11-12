@@ -7,6 +7,8 @@
   filter: drop-shadow(0 0 6px #00ffc2) drop-shadow(0 0 12px #00e5ff) !important;
   stroke: #00ffc2 !important;
   stroke-width: 2.5px !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
 }
 
 /* Card Plotting Active State */
