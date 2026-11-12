@@ -116,6 +116,7 @@ def test_server_and_apis():
         static_files = [
             ("index.html", "text/html"),
             ("manifest.json", "application/json"),
+            ("svgs.json", "application/json"),
             ("sw.js", "javascript"),
             ("css/app.css", "text/css"),
             ("css/components.css", "text/css"),

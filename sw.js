@@ -1,8 +1,9 @@
-const CACHE_NAME = 'vector-svg-v8';
+const CACHE_NAME = 'vector-svg-v9';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
+  './svgs.json',
   './css/app.css',
   './css/components.css',
   './css/viewer.css',

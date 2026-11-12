@@ -9,6 +9,7 @@ export class SVGLibrary {
     this.items = [];
     this.categories = ['All Artworks', 'Favorites'];
     this.discoveredCategories = [];
+    this.hasApiServer = false;
   }
 
   extractPalette(content) {
@@ -77,24 +78,46 @@ export class SVGLibrary {
 
   async load() {
     let svgsFound = [];
+    const isLocal = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname) || window.location.port === '8080';
 
-    // Try fetching from server API first
-    try {
-      const res = await fetch('/api/svgs');
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.svgs?.length > 0) {
-          svgsFound = data.svgs.map(item => this.parseSVGMetadata(item.name, item.content, item.category, item.path));
+    // 1. In local dev environment with python server, query API for live discovery
+    if (isLocal) {
+      try {
+        const res = await fetch('./api/svgs');
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.svgs?.length > 0) {
+            svgsFound = data.svgs.map(item => this.parseSVGMetadata(item.name, item.content, item.category, item.path));
+            this.hasApiServer = true;
+          }
+          if (data?.categories) {
+            this.discoveredCategories = data.categories;
+          }
         }
-        if (data?.categories) {
-          this.discoveredCategories = data.categories;
-        }
+      } catch {
+        this.hasApiServer = false;
       }
-    } catch {
-      // Server API offline or unavailable
     }
 
-    // Merge in any user uploads from local storage
+    // 2. On static hosting (e.g. GitHub Pages) or if local API server is unavailable, load static svgs.json
+    if (svgsFound.length === 0) {
+      try {
+        const res = await fetch('./svgs.json');
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.svgs?.length > 0) {
+            svgsFound = data.svgs.map(item => this.parseSVGMetadata(item.name, item.content, item.category, item.path));
+          }
+          if (data?.categories) {
+            this.discoveredCategories = data.categories;
+          }
+        }
+      } catch {
+        // Fallback below
+      }
+    }
+
+    // 3. Merge in any user uploads from local storage
     const userUploads = Storage.getUserUploads();
     if (userUploads?.length > 0) {
       for (const upload of userUploads) {

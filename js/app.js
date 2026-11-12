@@ -42,15 +42,17 @@ class App {
     this.renderCategoryDropdown();
     this.filterAndRender();
 
-    // Auto-sync when window regains focus (e.g. user created a new dir in svgs/)
-    window.addEventListener('focus', () => {
-      this.syncCategoriesAndItems();
-    });
+    // Auto-sync only when a live local server API is active
+    if (this.library.hasApiServer) {
+      window.addEventListener('focus', () => {
+        this.syncCategoriesAndItems();
+      });
 
-    // Background auto-sync poll every 10 seconds
-    setInterval(() => {
-      this.syncCategoriesAndItems();
-    }, 10000);
+      // Background auto-sync poll every 10 seconds
+      setInterval(() => {
+        this.syncCategoriesAndItems();
+      }, 10000);
+    }
   }
 
   async syncCategoriesAndItems() {
