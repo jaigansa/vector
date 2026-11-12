@@ -26,7 +26,6 @@ class App {
     this.emptyState = document.getElementById('empty-state');
     this.searchInput = document.getElementById('search-input');
     this.searchClearBtn = document.getElementById('search-clear-btn');
-    this.toastContainer = document.getElementById('toast-container');
 
     this.bindEvents();
     this.cleanupServiceWorker();
@@ -363,17 +362,14 @@ class App {
             this.closeAllCardMenus();
             SVGExporter.downloadSVG(item);
             this.triggerHaptic();
-            this.showToast(`Downloaded ${item.displayName}.svg`);
           } else if (action === 'download-dxf') {
             this.closeAllCardMenus();
             SVGExporter.downloadDXF(item);
             this.triggerHaptic();
-            this.showToast(`Exported ${item.displayName}.dxf`);
           } else if (action === 'download-png') {
             this.closeAllCardMenus();
             SVGExporter.exportPNG(item, 2.5);
             this.triggerHaptic();
-            this.showToast(`Exported ${item.displayName}.png`);
           }
           return;
         }
@@ -391,28 +387,6 @@ class App {
         this.viewer.toggleCardPlot(card, item);
       });
     });
-  }
-
-  showToast(message, isError = false) {
-    if (!this.toastContainer) return;
-    const toast = document.createElement('div');
-    toast.className = `toast ${isError ? 'toast-error' : 'toast-success'}`;
-    toast.innerHTML = `
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-        ${isError 
-          ? '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>' 
-          : '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>'}
-      </svg>
-      <span>${message}</span>
-    `;
-
-    this.toastContainer.appendChild(toast);
-    requestAnimationFrame(() => toast.classList.add('visible'));
-
-    setTimeout(() => {
-      toast.classList.remove('visible');
-      setTimeout(() => toast.remove(), 250);
-    }, 2400);
   }
 
   triggerHaptic() {

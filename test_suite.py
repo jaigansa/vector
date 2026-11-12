@@ -150,7 +150,7 @@ def test_dom_and_ui_bindings():
 
     core_elements = [
         "svg-grid", "empty-state", "search-input", "search-clear-btn",
-        "category-dropdown-btn", "toast-container"
+        "category-dropdown-btn"
     ]
 
     missing = [elem_id for elem_id in core_elements if f'id="{elem_id}"' not in html]

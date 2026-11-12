@@ -249,7 +249,6 @@ export class SVGViewer {
     if (this.isPlotting && this.activeCard === card) {
       this.pause();
       this.app.triggerHaptic();
-      this.app.showToast('Plot paused');
       return;
     }
 
@@ -266,7 +265,6 @@ export class SVGViewer {
 
     this.play();
     this.app.triggerHaptic();
-    this.app.showToast(`Plotting ${item.displayName}...`);
   }
 
   play() {
@@ -355,6 +353,5 @@ export class SVGViewer {
     this.currentProgress = 1.0;
     this.setProgress(1.0, true);
     this.app.triggerHaptic();
-    this.app.showToast('Plot drawing complete!');
   }
 }
