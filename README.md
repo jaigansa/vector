@@ -16,12 +16,9 @@ Open **[http://localhost:8080](http://localhost:8080)** in your browser (or `htt
 
 ## 🚀 Key Features
 
-- **Artwork Gallery**: Browse vector illustrations by category, search by name, and bookmark favorites.
+- **Artwork Gallery**: Browse vector illustrations by category and instant search.
 - **Plotter Simulation**: Watch artworks drawn stroke-by-stroke with glowing mechanical path tracing, faithfully showing the original SVG upon completion.
-- **Multi-Format Export**:
-  - **SVG**: Download clean vector files.
-  - **DXF**: Export AutoCAD R12 DXF format ready for CNC plotters, laser cutters, and vinyl cutters.
-  - **PNG**: Export high-resolution raster images.
+- **Multi-Format Export**: Quick three-dot (⋮) card menu to download clean **SVG**, AutoCAD **DXF** (ready for CNC plotters, laser cutters, vinyl cutters), and high-resolution **PNG**.
 - **Dynamic Categories**: Automatically discovers category folders inside `svgs/` and syncs with the search dropdown.
 - **Clean Light Theme**: Distraction-free, high-contrast presentation designed for crisp vector artwork display.
 - **Mobile & Tablet Ergonomics**: Responsive grid layout and touch-friendly navigation.

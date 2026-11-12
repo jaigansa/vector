@@ -21,7 +21,6 @@
   --radius-full: 9999px;
   --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-  --bottom-bar-height: 64px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -373,7 +372,7 @@ html, body {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 8px 16px calc(var(--bottom-bar-height) + var(--safe-bottom) + 16px) 16px;
+  padding: 12px 16px calc(var(--safe-bottom) + 20px) 16px;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -388,65 +387,7 @@ html, body {
 }
 
 @media (min-width: 641px) {
-  .bottom-nav-bar {
-    display: none !important;
-  }
-
   .main-viewport {
-    padding: 16px 28px 28px 28px;
+    padding: 16px 28px calc(var(--safe-bottom) + 28px) 28px;
   }
-}
-
-/* Bottom Navigation Bar (Mobile Phone Thumb Zone) */
-.bottom-nav-bar {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: calc(var(--bottom-bar-height) + var(--safe-bottom));
-  padding-bottom: var(--safe-bottom);
-  background: var(--bg-secondary);
-  border-top: 1px solid var(--border-color);
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  z-index: 30;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-}
-
-.nav-tab-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-  padding: 6px 16px;
-  border-radius: var(--radius-md);
-  transition: all 0.15s ease;
-  touch-action: manipulation;
-}
-
-.nav-tab-btn svg {
-  width: 22px;
-  height: 22px;
-  transition: transform 0.15s ease;
-}
-
-.nav-tab-btn.active {
-  color: var(--accent-color);
-}
-
-.nav-tab-btn.active svg {
-  transform: translateY(-2px);
-}
-
-.nav-tab-btn:active {
-  transform: scale(0.92);
 }

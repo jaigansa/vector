@@ -7,7 +7,7 @@ import { Storage } from './storage.js';
 export class SVGLibrary {
   constructor() {
     this.items = [];
-    this.categories = ['All Artworks', 'Favorites'];
+    this.categories = ['All Artworks'];
     this.discoveredCategories = [];
     this.hasApiServer = false;
   }

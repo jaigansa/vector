@@ -3,42 +3,10 @@
  */
 
 const STORAGE_KEYS = {
-  FAVORITES: 'vector_favorites_v1',
   UPLOADS: 'vector_user_uploads_v1'
 };
 
 export const Storage = {
-  getFavorites() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEYS.FAVORITES);
-      return raw ? new Set(JSON.parse(raw)) : new Set();
-    } catch {
-      return new Set();
-    }
-  },
-
-  isFavorite(id) {
-    return this.getFavorites().has(id);
-  },
-
-  toggleFavorite(id) {
-    const favs = this.getFavorites();
-    let isNowFav = false;
-    if (favs.has(id)) {
-      favs.delete(id);
-      isNowFav = false;
-    } else {
-      favs.add(id);
-      isNowFav = true;
-    }
-    try {
-      localStorage.setItem(STORAGE_KEYS.FAVORITES, JSON.stringify([...favs]));
-    } catch (e) {
-      console.warn('Failed to save favorites to localStorage', e);
-    }
-    return isNowFav;
-  },
-
   getUserUploads() {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.UPLOADS);

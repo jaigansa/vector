@@ -4,7 +4,6 @@
 
 import { SVGLibrary } from './library.js';
 import { SVGViewer } from './viewer.js';
-import { Storage } from './storage.js';
 import { SVGExporter } from './export.js';
 
 class App {
@@ -65,7 +64,6 @@ class App {
   getCategoryIcon(cat) {
     const iconSvgs = {
       'All Artworks': '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
-      'Favorites': '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>',
       'Tech & Software': '<path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/>',
       'Business & Marketing': '<path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/>',
       'Engineering & CAD': '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
@@ -88,25 +86,23 @@ class App {
       subCategories = Array.from(new Set(this.library.items.map(item => item.category))).filter(Boolean);
     }
 
-    const allCategories = ['All Artworks', 'Favorites', ...subCategories];
+    const allCategories = ['All Artworks', ...subCategories];
 
     // Calculate count per category
     const counts = {};
     counts['All Artworks'] = this.library.items.length;
-    counts['Favorites'] = this.library.items.filter(i => Storage.isFavorite(i.id)).length;
     subCategories.forEach(cat => {
       counts[cat] = this.library.items.filter(i => i.category === cat).length;
     });
 
     menu.innerHTML = allCategories.map(cat => {
-      const isFav = cat === 'Favorites';
       const iconPath = this.getCategoryIcon(cat);
       const isActive = this.activeCategory === cat;
       const count = counts[cat] ?? 0;
 
       return `
         <div class="category-dropdown-item ${isActive ? 'active' : ''}" data-filter="${cat}" role="option">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="${isFav ? '#ef4444' : 'none'}" stroke="${isFav ? '#ef4444' : 'currentColor'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             ${iconPath}
           </svg>
           <span class="dropdown-item-text">${cat}</span>
@@ -131,9 +127,8 @@ class App {
     const iconEl = document.getElementById('category-btn-icon');
     if (labelEl) labelEl.textContent = this.activeCategory;
     if (iconEl) {
-      const isFav = this.activeCategory === 'Favorites';
       iconEl.innerHTML = `
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="${isFav ? '#ef4444' : 'none'}" stroke="${isFav ? '#ef4444' : 'currentColor'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           ${this.getCategoryIcon(this.activeCategory)}
         </svg>
       `;
@@ -155,15 +150,6 @@ class App {
     // Update active highlight in menu
     menu?.querySelectorAll('.category-dropdown-item').forEach(el => {
       el.classList.toggle('active', el.dataset.filter === category);
-    });
-
-    // Synchronize bottom nav bar
-    document.querySelectorAll('.nav-tab-btn').forEach(b => {
-      if (category === 'Favorites') {
-        b.classList.toggle('active', b.dataset.tab === 'favorites');
-      } else {
-        b.classList.toggle('active', b.dataset.tab === 'library');
-      }
     });
 
     this.filterAndRender();
@@ -189,6 +175,9 @@ class App {
         dropdownBtn?.classList.remove('open');
         dropdownBtn?.setAttribute('aria-expanded', 'false');
       }
+      if (!e.target.closest('.card-menu-wrapper')) {
+        this.closeAllCardMenus();
+      }
     });
 
     // Close dropdown on Escape key
@@ -197,6 +186,7 @@ class App {
         dropdownMenu?.classList.remove('open');
         dropdownBtn?.classList.remove('open');
         dropdownBtn?.setAttribute('aria-expanded', 'false');
+        this.closeAllCardMenus();
       }
     });
 
@@ -214,34 +204,23 @@ class App {
       this.filterAndRender();
       this.searchInput.focus();
     });
-
-    // Bottom Navigation Tabs
-    document.querySelectorAll('.nav-tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.nav-tab-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        const tab = btn.dataset.tab;
-        this.handleTabSwitch(tab);
-      });
-    });
   }
 
-  handleTabSwitch(tab) {
-    this.triggerHaptic();
-    if (tab === 'favorites') {
-      this.selectCategory('Favorites');
-    } else {
-      this.selectCategory('All Artworks');
-    }
+  closeAllCardMenus() {
+    document.querySelectorAll('.card-actions-dropdown.show').forEach(d => {
+      d.classList.remove('show');
+      d.closest('.svg-card')?.classList.remove('menu-open');
+      const trigger = d.previousElementSibling;
+      trigger?.setAttribute('aria-expanded', 'false');
+      trigger?.classList.remove('active');
+    });
   }
 
   filterAndRender() {
     let items = [...this.library.items];
 
     // Filter by Category
-    if (this.activeCategory === 'Favorites') {
-      items = items.filter(item => Storage.isFavorite(item.id));
-    } else if (this.activeCategory !== 'All Artworks') {
+    if (this.activeCategory !== 'All Artworks') {
       items = items.filter(item => item.category === this.activeCategory);
     }
 
@@ -265,10 +244,8 @@ class App {
       this.emptyState.style.display = 'flex';
       const emptyMsg = this.emptyState.querySelector('p');
       if (emptyMsg) {
-        if (this.activeCategory !== 'All Artworks' && this.activeCategory !== 'Favorites') {
+        if (this.activeCategory !== 'All Artworks') {
           emptyMsg.textContent = `No SVGs found in "${this.activeCategory}". Add .svg files to its folder in svgs/ to see them here.`;
-        } else if (this.activeCategory === 'Favorites') {
-          emptyMsg.textContent = 'No favorite artworks saved yet.';
         } else {
           emptyMsg.textContent = 'No vector artworks found matching your search.';
         }
@@ -278,46 +255,50 @@ class App {
 
     this.emptyState.style.display = 'none';
     this.grid.innerHTML = this.filteredItems.map(item => {
-      const isFav = Storage.isFavorite(item.id);
-
       return `
         <div class="svg-card" data-id="${item.id}">
           <div class="svg-card-preview">
             ${item.content}
             <span class="artwork-badge">${item.category}</span>
-            <button class="btn-card-fav ${isFav ? 'favorite-active' : ''}" data-action="favorite" data-id="${item.id}" title="${isFav ? 'Remove from favorites' : 'Save to favorites'}">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="${isFav ? '#ef4444' : 'none'}" stroke="${isFav ? '#ef4444' : 'currentColor'}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-              </svg>
-            </button>
           </div>
           <div class="svg-card-info">
             <span class="svg-card-name" title="${item.displayName}">${item.displayName}</span>
             <div class="card-bottom-actions">
               <button class="btn-card-action btn-plot-action" data-action="plot-draw" data-id="${item.id}" title="Simulate CNC Plotter Draw">
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
                   <polygon points="5 3 19 12 5 21 5 3"></polygon>
                 </svg>
                 <span>Plot</span>
               </button>
-              <button class="btn-card-action" data-action="download-svg" data-id="${item.id}" title="Download SVG">
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-                </svg>
-                <span>SVG</span>
-              </button>
-              <button class="btn-card-action" data-action="download-dxf" data-id="${item.id}" title="Download DXF (AutoCAD/CNC/Laser)">
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
-                </svg>
-                <span>DXF</span>
-              </button>
-              <button class="btn-card-action" data-action="download-png" data-id="${item.id}" title="Download PNG">
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
-                </svg>
-                <span>PNG</span>
-              </button>
+              <div class="card-menu-wrapper">
+                <button class="btn-card-action btn-menu-trigger" data-action="toggle-menu" data-id="${item.id}" title="Export and more options" aria-label="More options" aria-haspopup="true" aria-expanded="false">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
+                    <circle cx="12" cy="5" r="2.2"/>
+                    <circle cx="12" cy="12" r="2.2"/>
+                    <circle cx="12" cy="19" r="2.2"/>
+                  </svg>
+                </button>
+                <div class="card-actions-dropdown" role="menu">
+                  <button class="card-dropdown-item" data-action="download-svg" data-id="${item.id}" role="menuitem">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    <span>Download SVG</span>
+                  </button>
+                  <button class="card-dropdown-item" data-action="download-dxf" data-id="${item.id}" role="menuitem">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
+                    </svg>
+                    <span>Download DXF</span>
+                  </button>
+                  <button class="card-dropdown-item" data-action="download-png" data-id="${item.id}" role="menuitem">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                    </svg>
+                    <span>Download PNG</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -335,36 +316,35 @@ class App {
           e.stopPropagation();
           const action = actionBtn.dataset.action;
           if (action === 'plot-draw') {
+            this.closeAllCardMenus();
             this.triggerHaptic();
             this.viewer.toggleCardPlot(card, item);
-          } else if (action === 'favorite') {
-            const isNowFav = Storage.toggleFavorite(id);
+          } else if (action === 'toggle-menu') {
             this.triggerHaptic();
-            this.showToast(isNowFav ? 'Saved to favorites' : 'Removed from favorites');
+            const wrapper = actionBtn.closest('.card-menu-wrapper');
+            const dropdown = wrapper?.querySelector('.card-actions-dropdown');
+            const isOpen = dropdown?.classList.contains('show');
 
-            if (this.activeCategory === 'Favorites') {
-              this.filterAndRender();
-            } else {
-              actionBtn.classList.toggle('favorite-active', isNowFav);
-              actionBtn.setAttribute('title', isNowFav ? 'Remove from favorites' : 'Save to favorites');
-              const svgIcon = actionBtn.querySelector('svg');
-              if (svgIcon) {
-                svgIcon.setAttribute('fill', isNowFav ? '#ef4444' : 'none');
-                svgIcon.setAttribute('stroke', isNowFav ? '#ef4444' : 'currentColor');
-              }
-              actionBtn.classList.remove('heart-pop');
-              void actionBtn.offsetWidth;
-              actionBtn.classList.add('heart-pop');
+            this.closeAllCardMenus();
+
+            if (!isOpen && dropdown) {
+              dropdown.classList.add('show');
+              card.classList.add('menu-open');
+              actionBtn.setAttribute('aria-expanded', 'true');
+              actionBtn.classList.add('active');
             }
           } else if (action === 'download-svg') {
+            this.closeAllCardMenus();
             SVGExporter.downloadSVG(item);
             this.triggerHaptic();
             this.showToast(`Downloaded ${item.displayName}.svg`);
           } else if (action === 'download-dxf') {
+            this.closeAllCardMenus();
             SVGExporter.downloadDXF(item);
             this.triggerHaptic();
             this.showToast(`Exported ${item.displayName}.dxf`);
           } else if (action === 'download-png') {
+            this.closeAllCardMenus();
             SVGExporter.exportPNG(item, 2.5);
             this.triggerHaptic();
             this.showToast(`Exported ${item.displayName}.png`);
@@ -372,7 +352,15 @@ class App {
           return;
         }
 
+        // Clicking inside dropdown or on card when menu is open
+        if (e.target.closest('.card-actions-dropdown')) return;
+        if (card.classList.contains('menu-open')) {
+          this.closeAllCardMenus();
+          return;
+        }
+
         // Clicking on card preview or body triggers plot animation for this card
+        this.closeAllCardMenus();
         this.triggerHaptic();
         this.viewer.toggleCardPlot(card, item);
       });
