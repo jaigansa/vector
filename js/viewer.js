@@ -3,9 +3,6 @@
  * Performs mechanical stroke-by-stroke draw animation followed by sequential color fill bloom.
  */
 
-import { SVGExporter } from './export.js';
-import { Storage } from './storage.js';
-
 export class SVGViewer {
   constructor(app) {
     this.app = app;
@@ -18,7 +15,6 @@ export class SVGViewer {
     this.animElements = [];
     this.animOriginalData = [];
     this.currentTimer = null;
-    this.animRafId = null;
   }
 
   setSpeed(speedVal) {
@@ -30,12 +26,8 @@ export class SVGViewer {
       clearTimeout(this.currentTimer);
       this.currentTimer = null;
     }
-    if (this.animRafId) {
-      cancelAnimationFrame(this.animRafId);
-      this.animRafId = null;
-    }
 
-    if (this.animOriginalData && this.animOriginalData.length > 0) {
+    if (this.animOriginalData?.length > 0) {
       this.animOriginalData.forEach(d => {
         if (d.origStyle) {
           d.el.setAttribute('style', d.origStyle);
@@ -118,7 +110,7 @@ export class SVGViewer {
             len = Math.ceil(2 * Math.PI * Math.sqrt((rx * rx + ry * ry) / 2));
           }
         }
-      } catch (e) {}
+      } catch {}
 
       const origFill = this.animOriginalData[i].origFill;
       const origStroke = this.animOriginalData[i].origStroke;
@@ -278,8 +270,4 @@ export class SVGViewer {
     this.app.triggerHaptic();
     this.app.showToast('Plot drawing complete!');
   }
-
-  // Backward compatibility stubs
-  open() {}
-  close() { this.stopPlotterAnimation(); }
 }

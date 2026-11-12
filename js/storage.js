@@ -5,9 +5,7 @@
 const STORAGE_KEYS = {
   FAVORITES: 'vector_favorites_v1',
   UPLOADS: 'vector_user_uploads_v1',
-  THEME: 'vector_theme_preference',
-  DENSITY: 'vector_grid_density',
-  ACCENT_COLOR: 'vector_undraw_accent_color'
+  THEME: 'vector_theme_preference'
 };
 
 export const Storage = {
@@ -15,7 +13,7 @@ export const Storage = {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.FAVORITES);
       return raw ? new Set(JSON.parse(raw)) : new Set();
-    } catch (e) {
+    } catch {
       return new Set();
     }
   },
@@ -46,14 +44,13 @@ export const Storage = {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.UPLOADS);
       return raw ? JSON.parse(raw) : [];
-    } catch (e) {
+    } catch {
       return [];
     }
   },
 
   saveUserUpload(svgItem) {
     const uploads = this.getUserUploads();
-    // Prepend or replace if exists
     const idx = uploads.findIndex(u => u.id === svgItem.id);
     if (idx >= 0) {
       uploads[idx] = svgItem;
@@ -74,25 +71,5 @@ export const Storage = {
   setTheme(theme) {
     localStorage.setItem(STORAGE_KEYS.THEME, theme);
     document.documentElement.setAttribute('data-theme', theme);
-  },
-
-  getDensity() {
-    return localStorage.getItem(STORAGE_KEYS.DENSITY) || 'density-detailed';
-  },
-
-  setDensity(density) {
-    localStorage.setItem(STORAGE_KEYS.DENSITY, density);
-  },
-
-  getAccentColor() {
-    return localStorage.getItem(STORAGE_KEYS.ACCENT_COLOR) || '#6c63ff';
-  },
-
-  setAccentColor(color) {
-    if (!color) {
-      localStorage.removeItem(STORAGE_KEYS.ACCENT_COLOR);
-    } else {
-      localStorage.setItem(STORAGE_KEYS.ACCENT_COLOR, color);
-    }
   }
 };

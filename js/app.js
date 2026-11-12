@@ -1,8 +1,8 @@
 /**
- * Main Application Controller for unDraw Vector SVG Artwork Gallery
+ * Main Application Controller for Vector SVG Artwork Gallery
  */
 
-import { SVGLibrary, recolorSVG } from './library.js';
+import { SVGLibrary } from './library.js';
 import { SVGViewer } from './viewer.js';
 import { Storage } from './storage.js';
 import { SVGExporter } from './export.js';
@@ -33,8 +33,6 @@ class App {
     this.searchClearBtn = document.getElementById('search-clear-btn');
     this.themeToggleBtn = document.getElementById('btn-theme-toggle');
     this.toastContainer = document.getElementById('toast-container');
-
-    this.grid.className = 'svg-grid';
 
     this.bindEvents();
     this.registerServiceWorker();
@@ -77,11 +75,6 @@ class App {
       'Nature & Scenery': '<polygon points="2 20 8 10 14 17 19 8 22 20 2 20"/>',
       'Abstract & 3D': '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>',
       'Art & Creative': '<path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.563-2.512 5.563-5.563C22 6.5 17.5 2 12 2z"/>',
-      'Development & Tech': '<path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/>',
-      'Scenery & Nature': '<polygon points="2 20 8 10 14 17 19 8 22 20 2 20"/>',
-      'Cyberpunk & Sci-Fi': '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
-      'Cosmos & Space': '<circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/>',
-      'Origami & Badges': '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
       'default': '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>'
     };
     return iconSvgs[cat] || iconSvgs['default'];
@@ -209,6 +202,7 @@ class App {
         dropdownBtn?.setAttribute('aria-expanded', 'false');
       }
     });
+
     // Search input
     this.searchInput?.addEventListener('input', (e) => {
       this.searchQuery = e.target.value.trim().toLowerCase();
@@ -259,7 +253,7 @@ class App {
     // Filter by Category
     if (this.activeCategory === 'Favorites') {
       items = items.filter(item => Storage.isFavorite(item.id));
-    } else if (this.activeCategory !== 'All Illustrations' && this.activeCategory !== 'All Artworks') {
+    } else if (this.activeCategory !== 'All Artworks') {
       items = items.filter(item => item.category === this.activeCategory);
     }
 
@@ -297,13 +291,11 @@ class App {
     this.emptyState.style.display = 'none';
     this.grid.innerHTML = this.filteredItems.map(item => {
       const isFav = Storage.isFavorite(item.id);
-      const renderedSVG = item.content;
-      item.recoloredContent = item.content;
 
       return `
         <div class="svg-card" data-id="${item.id}">
           <div class="svg-card-preview">
-            ${renderedSVG}
+            ${item.content}
             <span class="artwork-badge">${item.category}</span>
             <button class="btn-card-fav ${isFav ? 'favorite-active' : ''}" data-action="favorite" data-id="${item.id}" title="${isFav ? 'Remove from favorites' : 'Save to favorites'}">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="${isFav ? '#ef4444' : 'none'}" stroke="${isFav ? '#ef4444' : 'currentColor'}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -377,15 +369,15 @@ class App {
               actionBtn.classList.add('heart-pop');
             }
           } else if (action === 'download-svg') {
-            SVGExporter.downloadSVG(item, item.content);
+            SVGExporter.downloadSVG(item);
             this.triggerHaptic();
             this.showToast(`Downloaded ${item.displayName}.svg`);
           } else if (action === 'download-dxf') {
-            SVGExporter.downloadDXF(item, item.content);
+            SVGExporter.downloadDXF(item);
             this.triggerHaptic();
             this.showToast(`Exported ${item.displayName}.dxf`);
           } else if (action === 'download-png') {
-            SVGExporter.exportPNG(item, 2.5, item.content);
+            SVGExporter.exportPNG(item, 2.5);
             this.triggerHaptic();
             this.showToast(`Exported ${item.displayName}.png`);
           }
@@ -397,20 +389,6 @@ class App {
         this.viewer.toggleCardPlot(card, item);
       });
     });
-  }
-
-  navigateSibling(direction) {
-    if (!this.viewer.currentItem || this.filteredItems.length === 0) return;
-    const currentIndex = this.filteredItems.findIndex(i => i.id === this.viewer.currentItem.id);
-    if (currentIndex === -1) return;
-
-    let newIndex = currentIndex + direction;
-    if (newIndex < 0) newIndex = this.filteredItems.length - 1;
-    if (newIndex >= this.filteredItems.length) newIndex = 0;
-
-    const nextItem = this.filteredItems[newIndex];
-    this.viewer.open(nextItem);
-    this.triggerHaptic();
   }
 
   showToast(message, isError = false) {
@@ -439,7 +417,7 @@ class App {
     if (navigator.vibrate) {
       try {
         navigator.vibrate(20);
-      } catch (e) {}
+      } catch {}
     }
   }
 

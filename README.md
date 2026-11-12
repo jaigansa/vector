@@ -1,6 +1,6 @@
-# Vector — SVG Studio & Gallery
+# Vector — SVG Studio & Plotter
 
-A lightweight, zero-dependency SVG artwork gallery, layer inspector, wallpaper exporter, and interactive drawing animator. Built for desktop, tablet, and mobile.
+A lightweight, zero-dependency SVG artwork gallery, CNC plotter simulator, and vector exporter. Built for desktop, tablet, and mobile.
 
 ---
 
@@ -16,21 +16,21 @@ Open **[http://localhost:8080](http://localhost:8080)** in your browser (or `htt
 
 ## 🚀 Key Features
 
-- **Artwork Gallery**: Browse illustrations by category, search by name, view extracted color palettes, and bookmark favorites.
-- **Precision Canvas**: Pan & pinch-to-zoom (up to 2500%), wireframe mode, and dark/light background toggles.
-- **Layer Inspector**: View individual SVG paths and shapes, toggle visibility (👁️), and highlight layers on hover.
-- **Live Draw Studio**: Animate stroke sketching and color fills with speed controls (0.5×, 1×, 2×) and audio feedback.
-- **Color Filters**: One-tap color presets (*Cyberpunk, Sunset, Noir, Forest, Vivid, Invert*).
-- **Wallpaper Simulator**: Preview artworks as a phone or tablet lock screen with live clock and system UI.
-- **Code Optimizer**: One-tap SVG cleanup to strip metadata and reduce file size.
-- **Multi-Format Export**: Export as Phone/Tablet wallpaper (PNG), download `.svg`, or copy as SVG markup, React/JSX, Vue, or CSS data URI.
+- **Artwork Gallery**: Browse vector illustrations by category, search by name, and bookmark favorites.
+- **Plotter Simulation**: Watch artworks drawn stroke-by-stroke with glowing path tracing, followed by sequential color fill blooming.
+- **Multi-Format Export**:
+  - **SVG**: Download clean vector files.
+  - **DXF**: Export AutoCAD R12 DXF format ready for CNC plotters, laser cutters, and vinyl cutters.
+  - **PNG**: Export high-resolution raster images.
+- **Dynamic Categories**: Automatically discovers category folders inside `svgs/` and syncs with the search dropdown.
+- **Dark & Light Mode**: Clean theme toggle with persistent preferences.
+- **Mobile & Tablet Ergonomics**: Responsive grid layout and touch-friendly navigation.
 
 ---
 
 ## 📥 Adding Artworks
 
-- **In the Browser**: Drag and drop `.svg` files directly into the window or click **Upload**.
-- **In the File System**: Place `.svg` files into category folders inside `svgs/` (e.g. `svgs/art-creative/`). Subfolders automatically map to gallery categories.
+Place `.svg` files into subfolders inside `svgs/` (e.g., `svgs/illustrations/` or `svgs/icons/`). Subfolders automatically map to gallery categories in the dropdown filter.
 
 ---
 
@@ -38,4 +38,4 @@ Open **[http://localhost:8080](http://localhost:8080)** in your browser (or `htt
 
 - **Frontend**: Vanilla HTML5, CSS3, JavaScript (no npm build steps or external dependencies).
 - **Backend**: Built-in Python 3 HTTP server (`server.py`).
-- **PWA Ready**: Works offline with service worker support.
+- **PWA Ready**: Offline caching with service worker support.

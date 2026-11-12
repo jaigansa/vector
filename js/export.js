@@ -1,77 +1,10 @@
 /**
- * Export & Clipboard Utilities for SVG Vector Artworks
+ * Export Utilities for SVG Vector Artworks (SVG, DXF, PNG)
  */
 
 export const SVGExporter = {
-  async copyText(text) {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    textArea.style.position = 'fixed';
-    textArea.style.left = '-9999px';
-    textArea.style.top = '0';
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    const successful = document.execCommand('copy');
-    document.body.removeChild(textArea);
-    return successful;
-  },
-
-  async copySVG(item, customContent = null) {
-    const content = customContent || item.recoloredContent || item.content;
-    return await this.copyText(content);
-  },
-
-  async copyJSX(item, customContent = null) {
-    let svg = customContent || item.recoloredContent || item.content;
-    
-    // Convert attributes to JSX camelCase
-    svg = svg
-      .replace(/class=/g, 'className=')
-      .replace(/stroke-width=/g, 'strokeWidth=')
-      .replace(/stroke-linecap=/g, 'strokeLinecap=')
-      .replace(/stroke-linejoin=/g, 'strokeLinejoin=')
-      .replace(/stroke-miterlimit=/g, 'strokeMiterlimit=')
-      .replace(/stroke-dasharray=/g, 'strokeDasharray=')
-      .replace(/stroke-dashoffset=/g, 'strokeDashoffset=')
-      .replace(/fill-rule=/g, 'fillRule=')
-      .replace(/clip-rule=/g, 'clipRule=')
-      .replace(/clip-path=/g, 'clipPath=')
-      .replace(/stop-color=/g, 'stopColor=')
-      .replace(/stop-opacity=/g, 'stopOpacity=')
-      .replace(/xmlns:xlink=/g, 'xmlnsXlink=')
-      .replace(/xlink:href=/g, 'xlinkHref=');
-
-    // Add props spread to root svg
-    svg = svg.replace('<svg ', '<svg {...props} ');
-
-    const componentName = item.displayName
-      .split(' ')
-      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-      .join('') + 'Artwork';
-
-    const jsx = `export function ${componentName}(props) {\n  return (\n    ${svg}\n  );\n}`;
-    return await this.copyText(jsx);
-  },
-
-  async copyVue(item, customContent = null) {
-    const content = customContent || item.recoloredContent || item.content;
-    const vue = `<template>\n  ${content}\n</template>`;
-    return await this.copyText(vue);
-  },
-
-  async copyDataURI(item, customContent = null) {
-    const content = customContent || item.recoloredContent || item.content;
-    const uri = `data:image/svg+xml;utf8,${encodeURIComponent(content)}`;
-    return await this.copyText(uri);
-  },
-
   downloadSVG(item, customContent = null) {
-    const content = customContent || item.recoloredContent || item.content;
+    const content = customContent || item.content;
     const blob = new Blob([content], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -84,7 +17,7 @@ export const SVGExporter = {
   },
 
   downloadDXF(item, customContent = null) {
-    const content = customContent || item.recoloredContent || item.content;
+    const content = customContent || item.content;
     const dxfString = convertSVGToDXF(content, item.width || 800, item.height || 600);
     const blob = new Blob([dxfString], { type: 'application/dxf;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -98,34 +31,9 @@ export const SVGExporter = {
     URL.revokeObjectURL(url);
   },
 
-  optimizeSVG(content) {
-    let clean = content
-      .replace(/<\?xml[\s\S]*?\?>/gi, '')
-      .replace(/<!DOCTYPE[\s\S]*?>/gi, '')
-      .replace(/<!--[\s\S]*?-->/g, '')
-      .replace(/\s+/g, ' ')
-      .replace(/>\s+</g, '><')
-      .replace(/id="[^"]*"/g, (match) => {
-        // preserve gradient IDs but strip others
-        return /grad|sky|sun|moon|nebula/i.test(match) ? match : '';
-      })
-      .trim();
-
-    const origBytes = new Blob([content]).size;
-    const cleanBytes = new Blob([clean]).size;
-    const savings = Math.max(0, Math.round(((origBytes - cleanBytes) / origBytes) * 100));
-
-    return {
-      clean,
-      origBytes,
-      cleanBytes,
-      savings
-    };
-  },
-
   exportPNG(item, scale = 2, customContent = null) {
     return new Promise((resolve, reject) => {
-      const content = customContent || item.recoloredContent || item.content;
+      const content = customContent || item.content;
       const blob = new Blob([content], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const img = new Image();
@@ -149,7 +57,7 @@ export const SVGExporter = {
           const pngUrl = URL.createObjectURL(pngBlob);
           const a = document.createElement('a');
           a.href = pngUrl;
-          a.download = `${item.id}-wallpaper-${targetWidth}x${targetHeight}.png`;
+          a.download = `${item.id}-${targetWidth}x${targetHeight}.png`;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
@@ -178,13 +86,11 @@ export function convertSVGToDXF(svgString, width = 800, height = 600) {
   const svg = doc.querySelector('svg');
   if (!svg) return '';
 
-  let vbWidth = width;
   let vbHeight = height;
   const vb = svg.getAttribute('viewBox');
   if (vb) {
     const parts = vb.trim().split(/[\s,]+/).map(Number);
-    if (parts.length === 4 && parts[2] > 0 && parts[3] > 0) {
-      vbWidth = parts[2];
+    if (parts.length === 4 && parts[3] > 0) {
       vbHeight = parts[3];
     }
   }
@@ -261,7 +167,7 @@ export function convertSVGToDXF(svgString, width = 800, height = 600) {
         }
         document.body.removeChild(tempSvg);
       }
-    } catch (e) {}
+    } catch {}
   });
 
   // Convert circles / ellipses
@@ -286,9 +192,10 @@ export function convertSVGToDXF(svgString, width = 800, height = 600) {
   });
 
   // Build AutoCAD R12 ASCII DXF
-  const out = [];
-  out.push('0\nSECTION\n2\nHEADER\n9\n$ACADVER\n1\nAC1009\n0\nENDSEC');
-  out.push('0\nSECTION\n2\nENTITIES');
+  const out = [
+    '0\nSECTION\n2\nHEADER\n9\n$ACADVER\n1\nAC1009\n0\nENDSEC',
+    '0\nSECTION\n2\nENTITIES'
+  ];
 
   for (const l of lines) {
     const y1 = (vbHeight - l.y1).toFixed(2);
