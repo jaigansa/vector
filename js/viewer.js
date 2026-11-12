@@ -3,6 +3,8 @@
  * Performs mechanical stroke-by-stroke draw animation followed by sequential color fill bloom.
  */
 
+import { darkenHex } from './library.js';
+
 const NEON_PALETTE = [
   { stroke: '#00f5ff', glow: 'rgba(0, 245, 255, 0.7)' },   // Electric Cyan
   { stroke: '#39ff14', glow: 'rgba(57, 255, 20, 0.7)' },   // Neon Lime
@@ -66,18 +68,25 @@ export class SVGViewer {
         }
         if (d.origFill) d.el.setAttribute('fill', d.origFill);
         if (d.origFillOpacity) d.el.setAttribute('fill-opacity', d.origFillOpacity);
-        if (d.origStroke) d.el.setAttribute('stroke', d.origStroke);
-        if (d.origStrokeWidth) d.el.setAttribute('stroke-width', d.origStrokeWidth);
-        if (d.origStrokeLinecap) {
-          d.el.setAttribute('stroke-linecap', d.origStrokeLinecap);
-        } else {
-          d.el.removeAttribute('stroke-linecap');
-        }
-        if (d.origStrokeLinejoin) {
-          d.el.setAttribute('stroke-linejoin', d.origStrokeLinejoin);
-        } else {
-          d.el.removeAttribute('stroke-linejoin');
-        }
+
+        const finalStroke = (d.origStroke && d.origStroke !== 'none' && d.origStroke !== 'transparent')
+          ? d.origStroke
+          : (d.idleStroke || '#1e293b');
+        const finalStrokeWidth = (d.origStrokeWidth && d.origStrokeWidth !== '0' && d.origStrokeWidth !== '0px')
+          ? d.origStrokeWidth
+          : (d.idleStrokeWidth || '1.5px');
+
+        d.el.setAttribute('stroke', finalStroke);
+        d.el.setAttribute('stroke-width', finalStrokeWidth);
+        d.el.setAttribute('stroke-linecap', d.origStrokeLinecap || 'round');
+        d.el.setAttribute('stroke-linejoin', d.origStrokeLinejoin || 'round');
+
+        d.el.style.stroke = finalStroke;
+        d.el.style.strokeWidth = finalStrokeWidth;
+        d.el.style.strokeDasharray = 'none';
+        d.el.style.strokeDashoffset = 'none';
+        d.el.style.visibility = 'visible';
+
         d.el.style.removeProperty('--active-neon-stroke');
         d.el.style.removeProperty('--active-neon-glow');
         d.el.classList.remove('drawing-active-stroke');
@@ -131,16 +140,52 @@ export class SVGViewer {
 
     if (this.animElements.length === 0) return;
 
-    this.animOriginalData = this.animElements.map(el => ({
-      el,
-      origFill: el.getAttribute('fill') || '',
-      origFillOpacity: el.getAttribute('fill-opacity') || '',
-      origStroke: el.getAttribute('stroke') || '',
-      origStrokeWidth: el.getAttribute('stroke-width') || '',
-      origStrokeLinecap: el.getAttribute('stroke-linecap') || '',
-      origStrokeLinejoin: el.getAttribute('stroke-linejoin') || '',
-      origStyle: el.getAttribute('style') || ''
-    }));
+    let dominantStroke = null;
+    let dominantWidth = null;
+    for (const el of this.animElements) {
+      const s = el.getAttribute('stroke');
+      const sw = el.getAttribute('stroke-width');
+      if (s && s !== 'none' && s !== 'transparent' && !dominantStroke) dominantStroke = s;
+      if (sw && sw !== '0' && sw !== '0px' && !dominantWidth) dominantWidth = sw;
+    }
+
+    this.animOriginalData = this.animElements.map(el => {
+      const origFill = el.getAttribute('fill') || '';
+      const origFillOpacity = el.getAttribute('fill-opacity') || '';
+      const origStroke = el.getAttribute('stroke') || '';
+      const origStrokeWidth = el.getAttribute('stroke-width') || '';
+      const origStrokeLinecap = el.getAttribute('stroke-linecap') || '';
+      const origStrokeLinejoin = el.getAttribute('stroke-linejoin') || '';
+      const origStyle = el.getAttribute('style') || '';
+
+      let idleStroke = origStroke;
+      let idleStrokeWidth = origStrokeWidth;
+      if (!idleStroke || idleStroke === 'none' || idleStroke === 'transparent') {
+        if (dominantStroke) {
+          idleStroke = dominantStroke;
+        } else if (origFill && origFill.startsWith('#') && (origFill.length === 4 || origFill.length === 7)) {
+          idleStroke = darkenHex(origFill, 0.75);
+        } else {
+          idleStroke = '#1e293b';
+        }
+      }
+      if (!idleStrokeWidth || idleStrokeWidth === '0' || idleStrokeWidth === '0px') {
+        idleStrokeWidth = dominantWidth || '1.5px';
+      }
+
+      return {
+        el,
+        origFill,
+        origFillOpacity,
+        origStroke,
+        origStrokeWidth,
+        origStrokeLinecap,
+        origStrokeLinejoin,
+        origStyle,
+        idleStroke,
+        idleStrokeWidth
+      };
+    });
 
     const pinWidth = this.getPinStrokeWidth(svg);
     const neonStartIndex = Math.floor(Math.random() * NEON_PALETTE.length);
@@ -314,15 +359,17 @@ export class SVGViewer {
           el.style.fillOpacity = '1';
         }
 
-        if (!orig.origStroke || orig.origStroke === 'none') {
-          el.style.stroke = 'transparent';
-          el.style.strokeWidth = '0px';
-        } else {
-          el.style.stroke = orig.origStroke;
-          el.style.strokeWidth = orig.origStrokeWidth || '1px';
-          el.style.strokeLinecap = orig.origStrokeLinecap || 'round';
-          el.style.strokeLinejoin = orig.origStrokeLinejoin || 'round';
-        }
+        const strokeColor = (orig.origStroke && orig.origStroke !== 'none' && orig.origStroke !== 'transparent')
+          ? orig.origStroke
+          : (orig.idleStroke || '#1e293b');
+        const strokeW = (orig.origStrokeWidth && orig.origStrokeWidth !== '0' && orig.origStrokeWidth !== '0px')
+          ? orig.origStrokeWidth
+          : (orig.idleStrokeWidth || '1.5px');
+
+        el.style.stroke = strokeColor;
+        el.style.strokeWidth = strokeW;
+        el.style.strokeLinecap = orig.origStrokeLinecap || 'round';
+        el.style.strokeLinejoin = orig.origStrokeLinejoin || 'round';
 
         if (i % 2 === 0) this.app.triggerHaptic();
 

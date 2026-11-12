@@ -4,6 +4,133 @@
 
 import { Storage } from './storage.js';
 
+export function darkenHex(hex, factor = 0.75) {
+  let h = (hex || '').replace(/^#/, '');
+  if (h.length === 3) h = h.split('').map(c => c + c).join('');
+  if (h.length !== 6) return '#1e293b';
+  try {
+    const r = Math.max(0, Math.floor(parseInt(h.slice(0, 2), 16) * factor));
+    const g = Math.max(0, Math.floor(parseInt(h.slice(2, 4), 16) * factor));
+    const b = Math.max(0, Math.floor(parseInt(h.slice(4, 6), 16) * factor));
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  } catch {
+    return '#1e293b';
+  }
+}
+
+export function ensureIdleStrokes(svgContent) {
+  if (!svgContent || typeof svgContent !== 'string') return svgContent;
+  if (typeof DOMParser === 'undefined' || typeof XMLSerializer === 'undefined') return svgContent;
+
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svgContent, 'image/svg+xml');
+    const svg = doc.querySelector('svg');
+    if (!svg) return svgContent;
+
+    let vbW = 800;
+    const vb = svg.getAttribute('viewBox');
+    if (vb) {
+      const parts = vb.trim().split(/[\s,]+/).map(Number);
+      if (parts.length === 4 && parts[2] > 0) vbW = parts[2];
+    } else {
+      const w = parseFloat(svg.getAttribute('width'));
+      if (w > 0) vbW = w;
+    }
+
+    const defaultW = vbW <= 100 ? '1.5' : (vbW <= 500 ? '2' : '2.5');
+
+    const shapes = Array.from(svg.querySelectorAll('path, polygon, polyline, circle, rect, ellipse, line'))
+      .filter(el => !el.closest('defs'));
+
+    if (shapes.length === 0) return svgContent;
+
+    let dominantStroke = null;
+    let dominantWidth = null;
+
+    for (const el of shapes) {
+      const style = el.getAttribute('style') || '';
+      let s = el.getAttribute('stroke');
+      let sw = el.getAttribute('stroke-width');
+
+      if (!s && style) {
+        const m = style.match(/(?:^|;)\s*stroke\s*:\s*([^;]+)/i);
+        if (m) s = m[1].trim();
+      }
+      if (!sw && style) {
+        const m = style.match(/(?:^|;)\s*stroke-width\s*:\s*([^;]+)/i);
+        if (m) sw = m[1].trim();
+      }
+
+      if (s && s !== 'none' && s !== 'transparent' && !dominantStroke) {
+        dominantStroke = s;
+      }
+      if (sw && sw !== '0' && sw !== '0px' && !dominantWidth) {
+        dominantWidth = sw;
+      }
+    }
+
+    const fallbackStroke = dominantStroke || '#1e293b';
+    const fallbackWidth = dominantWidth || defaultW;
+
+    let modified = false;
+
+    for (const el of shapes) {
+      const style = el.getAttribute('style') || '';
+      let s = el.getAttribute('stroke');
+      let sw = el.getAttribute('stroke-width');
+      let fill = el.getAttribute('fill');
+
+      if (!s && style) {
+        const m = style.match(/(?:^|;)\s*stroke\s*:\s*([^;]+)/i);
+        if (m) s = m[1].trim();
+      }
+      if (!sw && style) {
+        const m = style.match(/(?:^|;)\s*stroke-width\s*:\s*([^;]+)/i);
+        if (m) sw = m[1].trim();
+      }
+      if (!fill && style) {
+        const m = style.match(/(?:^|;)\s*fill\s*:\s*([^;]+)/i);
+        if (m) fill = m[1].trim();
+      }
+
+      const hasS = s && s !== 'none' && s !== 'transparent';
+      const hasSw = sw && sw !== '0' && sw !== '0px';
+
+      if (!hasS) {
+        modified = true;
+        if (fill && fill.startsWith('#') && (fill.length === 4 || fill.length === 7)) {
+          el.setAttribute('stroke', dominantStroke || darkenHex(fill, 0.75));
+        } else {
+          el.setAttribute('stroke', fallbackStroke);
+        }
+      }
+
+      if (!hasSw) {
+        modified = true;
+        el.setAttribute('stroke-width', fallbackWidth);
+      }
+
+      if (!el.hasAttribute('stroke-linecap') && !style.includes('stroke-linecap')) {
+        el.setAttribute('stroke-linecap', 'round');
+        modified = true;
+      }
+      if (!el.hasAttribute('stroke-linejoin') && !style.includes('stroke-linejoin')) {
+        el.setAttribute('stroke-linejoin', 'round');
+        modified = true;
+      }
+    }
+
+    if (modified) {
+      const serializer = new XMLSerializer();
+      return serializer.serializeToString(svg);
+    }
+    return svgContent;
+  } catch {
+    return svgContent;
+  }
+}
+
 export class SVGLibrary {
   constructor() {
     this.items = [];
@@ -29,7 +156,8 @@ export class SVGLibrary {
     return Array.from(colors);
   }
 
-  parseSVGMetadata(name, content, explicitCategory = null, relPath = null) {
+  parseSVGMetadata(name, rawContent, explicitCategory = null, relPath = null) {
+    const content = ensureIdleStrokes(rawContent || '');
     const id = name.replace(/\.svg$/i, '').toLowerCase();
     const sizeBytes = new Blob([content]).size;
 

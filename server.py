@@ -13,7 +13,7 @@ import socketserver
 import sys
 from urllib.parse import urlparse
 
-from build import BASE_DIR, SVG_DIR, CATEGORY_MAP, build as build_catalog, slug_to_category
+from build import BASE_DIR, SVG_DIR, CATEGORY_MAP, build as build_catalog, slug_to_category, ensure_idle_strokes
 
 DEFAULT_PORT = int(os.environ.get("PORT", 8080))
 
@@ -95,6 +95,7 @@ class SVGViewerHandler(http.server.SimpleHTTPRequestHandler):
             os.makedirs(dest_dir, exist_ok=True)
             dest_path = os.path.join(dest_dir, filename)
 
+            content = ensure_idle_strokes(content)
             with open(dest_path, "w", encoding="utf-8") as f:
                 f.write(content)
 
