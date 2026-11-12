@@ -30,7 +30,10 @@ Open **[http://localhost:8080](http://localhost:8080)** in your browser (or `htt
 
 ## 📥 Adding Artworks
 
-Place `.svg` files into subfolders inside `svgs/` (e.g., `svgs/illustrations/` or `svgs/icons/`). Subfolders automatically map to gallery categories in the dropdown filter.
+Just drop `.svg` files into category folders inside `svgs/` (e.g. `svgs/illustrations/` or `svgs/icons/`) and push!
+
+- **GitHub Pages (Automated)**: Pushing to `main` automatically triggers GitHub Actions to build `svgs.json` and deploy the updated static site.
+- **Local Development**: Run `python3 server.py` (live auto-sync) or build the static catalog anytime via `python3 build.py`.
 
 ---
 
