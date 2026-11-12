@@ -30,7 +30,7 @@ jobs:
           python-version: '3.x'
 
       - name: Build static svgs.json catalog
-        run: python3 build.py
+        run: python3 server.py --build
 
       - name: Commit updated svgs.json (if modified)
         run: |
