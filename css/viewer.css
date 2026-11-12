@@ -2,11 +2,10 @@
    PLOTTER MACHINE ANIMATION & STROKE STYLES
    ========================================================================== */
 
-/* Neon laser active drawing glow on SVG path */
+/* Refined, reduced-glow neon active drawing on SVG path */
 .drawing-active-stroke {
-  filter: drop-shadow(0 0 6px #00ffc2) drop-shadow(0 0 12px #00e5ff) !important;
-  stroke: #00ffc2 !important;
-  stroke-width: 2.5px !important;
+  filter: drop-shadow(0 0 2.5px var(--active-neon-glow, rgba(0, 245, 255, 0.7))) !important;
+  stroke: var(--active-neon-stroke, #00f5ff) !important;
   stroke-linecap: round !important;
   stroke-linejoin: round !important;
 }
@@ -14,7 +13,7 @@
 /* Card Plotting Active State */
 .svg-card.is-plotting {
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px var(--accent-color), 0 8px 28px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 0 0 2px var(--accent-color), 0 8px 24px rgba(99, 102, 241, 0.25);
 }
 
 .svg-card.is-plotting .btn-plot-action {

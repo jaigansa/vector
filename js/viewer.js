@@ -3,6 +3,18 @@
  * Performs mechanical stroke-by-stroke draw animation followed by sequential color fill bloom.
  */
 
+const NEON_PALETTE = [
+  { stroke: '#00f5ff', glow: 'rgba(0, 245, 255, 0.7)' },   // Electric Cyan
+  { stroke: '#39ff14', glow: 'rgba(57, 255, 20, 0.7)' },   // Neon Lime
+  { stroke: '#ff007f', glow: 'rgba(255, 0, 127, 0.7)' },   // Hot Neon Pink
+  { stroke: '#ffe600', glow: 'rgba(255, 230, 0, 0.7)' },   // Laser Yellow
+  { stroke: '#bf00ff', glow: 'rgba(191, 0, 255, 0.7)' },   // Electric Violet
+  { stroke: '#ff5e00', glow: 'rgba(255, 94, 0, 0.7)' },    // Neon Tangerine
+  { stroke: '#00ffcc', glow: 'rgba(0, 255, 204, 0.7)' },   // Aquamarine Neon
+  { stroke: '#00aaff', glow: 'rgba(0, 170, 255, 0.7)' },   // Deep Sky Neon
+  { stroke: '#ff0055', glow: 'rgba(255, 0, 85, 0.7)' }     // Neon Crimson
+];
+
 export class SVGViewer {
   constructor(app) {
     this.app = app;
@@ -19,6 +31,17 @@ export class SVGViewer {
 
   setSpeed(speedVal) {
     this.animSpeed = speedVal;
+  }
+
+  getPinStrokeWidth() {
+    const width = window.innerWidth || document.documentElement.clientWidth || 800;
+    if (width <= 480) {
+      return '1.0px';
+    } else if (width <= 768) {
+      return '1.2px';
+    } else {
+      return '1.4px';
+    }
   }
 
   restoreOriginalAttributes() {
@@ -43,6 +66,13 @@ export class SVGViewer {
         } else {
           d.el.removeAttribute('stroke-linejoin');
         }
+        if (d.origVectorEffect) {
+          d.el.setAttribute('vector-effect', d.origVectorEffect);
+        } else {
+          d.el.removeAttribute('vector-effect');
+        }
+        d.el.style.removeProperty('--active-neon-stroke');
+        d.el.style.removeProperty('--active-neon-glow');
         d.el.classList.remove('drawing-active-stroke');
       });
     }
@@ -102,10 +132,14 @@ export class SVGViewer {
       origStrokeWidth: el.getAttribute('stroke-width') || '',
       origStrokeLinecap: el.getAttribute('stroke-linecap') || '',
       origStrokeLinejoin: el.getAttribute('stroke-linejoin') || '',
+      origVectorEffect: el.getAttribute('vector-effect') || '',
       origStyle: el.getAttribute('style') || ''
     }));
 
-    // Setup initial state: rounded caps & joins, transparent fills, hidden strokes prepared for drawing
+    const pinWidth = this.getPinStrokeWidth();
+    const neonStartIndex = Math.floor(Math.random() * NEON_PALETTE.length);
+
+    // Setup initial state: pin line stroke width, random neon colors, rounded caps & joins
     this.animElements.forEach((el, i) => {
       let len = 600;
       try {
@@ -128,23 +162,21 @@ export class SVGViewer {
         }
       } catch {}
 
-      const origFill = this.animOriginalData[i].origFill;
-      const origStroke = this.animOriginalData[i].origStroke;
-
-      let strokeColor = origStroke && origStroke !== 'none' ? origStroke : origFill;
-      if (!strokeColor || strokeColor.startsWith('url') || strokeColor === 'none') {
-        const palette = item.palette || [];
-        strokeColor = palette[i % palette.length] || '#6366f1';
-      }
+      // Assign contrasting random neon color
+      const neon = NEON_PALETTE[(neonStartIndex + i) % NEON_PALETTE.length];
 
       el.classList.remove('drawing-active-stroke');
       el.style.transition = 'none';
       el.style.fill = 'transparent';
       el.style.fillOpacity = '0';
-      el.style.stroke = strokeColor;
-      el.style.strokeWidth = '2.5px';
+      el.style.stroke = neon.stroke;
+      el.style.strokeWidth = pinWidth;
       el.style.strokeLinecap = 'round';
       el.style.strokeLinejoin = 'round';
+      el.style.vectorEffect = 'non-scaling-stroke';
+      el.setAttribute('vector-effect', 'non-scaling-stroke');
+      el.style.setProperty('--active-neon-stroke', neon.stroke);
+      el.style.setProperty('--active-neon-glow', neon.glow);
       el.style.strokeDasharray = `${len} ${len}`;
       el.style.strokeDashoffset = `${len}`;
       el.style.visibility = 'hidden';
@@ -250,6 +282,13 @@ export class SVGViewer {
           el.style.strokeWidth = orig.origStrokeWidth || '1px';
           el.style.strokeLinecap = orig.origStrokeLinecap || 'round';
           el.style.strokeLinejoin = orig.origStrokeLinejoin || 'round';
+          if (orig.origVectorEffect) {
+            el.setAttribute('vector-effect', orig.origVectorEffect);
+            el.style.vectorEffect = orig.origVectorEffect;
+          } else {
+            el.removeAttribute('vector-effect');
+            el.style.vectorEffect = '';
+          }
         }
 
         if (i % 2 === 0) this.app.triggerHaptic();
