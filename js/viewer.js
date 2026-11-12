@@ -1,6 +1,6 @@
 /**
  * Interactive SVG Vector Artwork Plotter Simulation Engine
- * Performs mechanical stroke-by-stroke draw animation followed by sequential color fill bloom.
+ * Performs mechanical stroke-by-stroke draw animation, faithfully showing the original SVG upon completion.
  */
 
 const NEON_PALETTE = [
@@ -20,12 +20,12 @@ export class SVGViewer {
     this.app = app;
     this.activeCard = null;
     this.activeItem = null;
+    this.activeSvg = null;
+    this.originalSvgHTML = null;
     this.animSpeed = 1.0;
     this.isPlotting = false;
-    this.animPhase = 0; // 0=idle, 1=plotting strokes, 2=color bloom, 3=complete
     this.animStep = 0;
     this.animElements = [];
-    this.animOriginalData = [];
     this.currentTimer = null;
   }
 
@@ -57,52 +57,19 @@ export class SVGViewer {
   }
 
   restoreOriginalAttributes() {
-    if (this.animOriginalData?.length > 0) {
-      this.animOriginalData.forEach(d => {
-        if (d.origStyle) {
-          d.el.setAttribute('style', d.origStyle);
-        } else {
-          d.el.removeAttribute('style');
+    if (this.activeSvg && this.originalSvgHTML) {
+      const parent = this.activeSvg.parentNode;
+      if (parent) {
+        const temp = document.createElement('div');
+        temp.innerHTML = this.originalSvgHTML;
+        const restoredSvg = temp.firstElementChild;
+        if (restoredSvg) {
+          parent.replaceChild(restoredSvg, this.activeSvg);
+          this.activeSvg = restoredSvg;
         }
-        if (d.origFill) {
-          d.el.setAttribute('fill', d.origFill);
-        } else {
-          d.el.removeAttribute('fill');
-        }
-        if (d.origFillOpacity) {
-          d.el.setAttribute('fill-opacity', d.origFillOpacity);
-        } else {
-          d.el.removeAttribute('fill-opacity');
-        }
-
-        if (d.hasOriginalStroke) {
-          if (d.explicitStroke) d.el.setAttribute('stroke', d.origStroke);
-          if (d.origStrokeWidth) d.el.setAttribute('stroke-width', d.origStrokeWidth);
-          if (d.origStrokeLinecap) d.el.setAttribute('stroke-linecap', d.origStrokeLinecap);
-          if (d.origStrokeLinejoin) d.el.setAttribute('stroke-linejoin', d.origStrokeLinejoin);
-          d.el.style.stroke = d.origStroke || '';
-          d.el.style.strokeWidth = d.origStrokeWidth || '';
-          d.el.style.strokeLinecap = d.origStrokeLinecap || '';
-          d.el.style.strokeLinejoin = d.origStrokeLinejoin || '';
-        } else {
-          // If the original file did not have stroke, do not stroke it after draw animation
-          d.el.removeAttribute('stroke');
-          d.el.removeAttribute('stroke-width');
-          d.el.style.stroke = 'transparent';
-          d.el.style.strokeWidth = '0px';
-        }
-
-        d.el.style.fill = '';
-        d.el.style.fillOpacity = d.origFillOpacity || '';
-        d.el.style.strokeDasharray = 'none';
-        d.el.style.strokeDashoffset = 'none';
-        d.el.style.visibility = 'visible';
-
-        d.el.style.removeProperty('--active-neon-stroke');
-        d.el.style.removeProperty('--active-neon-glow');
-        d.el.classList.remove('drawing-active-stroke');
-      });
+      }
     }
+    this.animElements = [];
   }
 
   stopPlotterAnimation() {
@@ -120,10 +87,11 @@ export class SVGViewer {
     }
 
     this.isPlotting = false;
-    this.animPhase = 0;
     this.animStep = 0;
     this.activeCard = null;
     this.activeItem = null;
+    this.activeSvg = null;
+    this.originalSvgHTML = null;
   }
 
   toggleCardPlot(card, item) {
@@ -146,54 +114,13 @@ export class SVGViewer {
     const svg = card.querySelector('.svg-card-preview svg');
     if (!svg) return;
 
+    this.activeSvg = svg;
+    this.originalSvgHTML = item.content || svg.outerHTML;
+
     this.animElements = Array.from(svg.querySelectorAll('path, polygon, polyline, circle, rect, ellipse, line'))
       .filter(el => !el.closest('defs'));
 
     if (this.animElements.length === 0) return;
-
-    this.animOriginalData = this.animElements.map(el => {
-      const origFill = el.getAttribute('fill') || '';
-      const origFillOpacity = el.getAttribute('fill-opacity') || '';
-      const origStroke = el.getAttribute('stroke') || '';
-      const origStrokeWidth = el.getAttribute('stroke-width') || '';
-      const origStrokeLinecap = el.getAttribute('stroke-linecap') || '';
-      const origStrokeLinejoin = el.getAttribute('stroke-linejoin') || '';
-      const origStyle = el.getAttribute('style') || '';
-
-      const explicitStroke = el.hasAttribute('stroke') && origStroke !== '' && origStroke !== 'none' && origStroke !== 'transparent';
-      let styleStroke = false;
-      if (origStyle) {
-        const sm = origStyle.match(/(?:^|;)\s*stroke\s*:\s*([^;]+)/i);
-        if (sm && sm[1].trim() !== 'none' && sm[1].trim() !== 'transparent') {
-          styleStroke = true;
-        }
-      }
-      let inheritedStroke = false;
-      if (!explicitStroke && !styleStroke) {
-        const pStrokeEl = el.parentElement?.closest('[stroke]');
-        if (pStrokeEl) {
-          const ps = pStrokeEl.getAttribute('stroke');
-          if (ps && ps !== 'none' && ps !== 'transparent') {
-            inheritedStroke = true;
-          }
-        }
-      }
-
-      const hasOriginalStroke = explicitStroke || styleStroke || inheritedStroke;
-
-      return {
-        el,
-        origFill,
-        origFillOpacity,
-        origStroke,
-        origStrokeWidth,
-        origStrokeLinecap,
-        origStrokeLinejoin,
-        origStyle,
-        hasOriginalStroke,
-        explicitStroke
-      };
-    });
 
     const pinWidth = this.getPinStrokeWidth(svg);
     const neonStartIndex = Math.floor(Math.random() * NEON_PALETTE.length);
@@ -266,7 +193,6 @@ export class SVGViewer {
     });
 
     this.animStep = 0;
-    this.animPhase = 1; // Phase 1: Mechanical Plotter Stroke Drawing
     this.isPlotting = true;
 
     this.activeCard.classList.add('is-plotting');
@@ -285,112 +211,54 @@ export class SVGViewer {
     const total = this.animElements.length;
     if (total === 0) return;
 
-    if (this.animPhase === 1) {
-      // Phase 1: Mechanical Plotter Drawing path by path
-      const i = this.animStep;
-      if (i < total) {
-        const el = this.animElements[i];
-        const len = el._plotLen || 600;
+    const i = this.animStep;
+    if (i < total) {
+      const el = this.animElements[i];
+      const len = el._plotLen || 600;
 
-        if (i > 0 && this.animElements[i - 1]) {
-          this.animElements[i - 1].classList.remove('drawing-active-stroke');
-        }
-
-        el.classList.add('drawing-active-stroke');
-        el.style.visibility = 'visible';
-
-        const rapidDelay = Math.round(Math.min(100, Math.max(30, 75 / this.animSpeed)));
-
-        this.currentTimer = setTimeout(() => {
-          if (!this.isPlotting) return;
-
-          const baseDuration = Math.min(1.4, Math.max(0.4, (len / 600) * 0.9));
-          const durationSec = baseDuration / this.animSpeed;
-          const durationMs = durationSec * 1000;
-
-          el.style.transition = `stroke-dashoffset ${durationSec}s cubic-bezier(0.25, 0.1, 0.25, 1)`;
-          el.style.strokeDashoffset = '0';
-
-          if (i % 2 === 0) this.app.triggerHaptic();
-
-          this.animStep++;
-          const settleDelay = Math.round(60 / this.animSpeed);
-          this.currentTimer = setTimeout(() => {
-            if (!this.isPlotting) return;
-            // Once this path's draw animation finishes, remove dasharray so the stroke is 100% complete and fully closed
-            el.style.transition = 'none';
-            el.style.strokeDasharray = 'none';
-            el.style.strokeDashoffset = 'none';
-            this.runPlotterStep();
-          }, Math.round(durationMs + settleDelay));
-        }, rapidDelay);
-
-      } else {
-        // Phase 1 Complete: All paths drawn! Transition to Phase 2 (Color Fill Bloom)
-        this.animElements.forEach(el => {
-          el.classList.remove('drawing-active-stroke');
-          el.style.strokeDasharray = 'none';
-          el.style.strokeDashoffset = 'none';
-        });
-        this.animPhase = 2;
-        this.animStep = 0;
-
-        const plotBtn = this.activeCard?.querySelector('.btn-plot-action span');
-        if (plotBtn) plotBtn.textContent = 'Coloring...';
-
-        this.app.triggerHaptic();
-
-        const pauseDuration = Math.round(300 / this.animSpeed);
-        this.currentTimer = setTimeout(() => this.runPlotterStep(), pauseDuration);
+      if (i > 0 && this.animElements[i - 1]) {
+        this.animElements[i - 1].classList.remove('drawing-active-stroke');
       }
-    } else if (this.animPhase === 2) {
-      // Phase 2: Sequential Color Fill Blooming
-      const i = this.animStep;
-      if (i < total) {
-        const el = this.animElements[i];
-        const orig = this.animOriginalData[i];
-        const fillDur = Math.max(0.3, Math.min(0.7, 2.0 / Math.sqrt(total))) / this.animSpeed;
 
-        el.style.transition = `fill-opacity ${fillDur}s ease-in-out, stroke ${fillDur}s ease-in-out, stroke-width ${fillDur}s ease-in-out`;
+      el.classList.add('drawing-active-stroke');
+      el.style.visibility = 'visible';
 
-        if (orig.origFill) {
-          el.setAttribute('fill', orig.origFill);
-          el.style.fill = '';
-        } else {
-          el.style.fill = '';
-        }
+      const rapidDelay = Math.round(Math.min(100, Math.max(30, 75 / this.animSpeed)));
 
-        if (orig.origFillOpacity) {
-          el.setAttribute('fill-opacity', orig.origFillOpacity);
-          el.style.fillOpacity = orig.origFillOpacity;
-        } else {
-          el.style.fillOpacity = '1';
-        }
+      this.currentTimer = setTimeout(() => {
+        if (!this.isPlotting) return;
 
-        if (!orig.hasOriginalStroke) {
-          el.style.stroke = 'transparent';
-          el.style.strokeWidth = '0px';
-        } else {
-          el.style.stroke = orig.origStroke || '';
-          el.style.strokeWidth = orig.origStrokeWidth || '1px';
-          el.style.strokeLinecap = orig.origStrokeLinecap || 'round';
-          el.style.strokeLinejoin = orig.origStrokeLinejoin || 'round';
-        }
+        const baseDuration = Math.min(1.4, Math.max(0.4, (len / 600) * 0.9));
+        const durationSec = baseDuration / this.animSpeed;
+        const durationMs = durationSec * 1000;
+
+        el.style.transition = `stroke-dashoffset ${durationSec}s cubic-bezier(0.25, 0.1, 0.25, 1)`;
+        el.style.strokeDashoffset = '0';
 
         if (i % 2 === 0) this.app.triggerHaptic();
 
         this.animStep++;
-        const stepDelay = Math.max(80, Math.round(fillDur * 0.7 * 1000));
-        this.currentTimer = setTimeout(() => this.runPlotterStep(), stepDelay);
-      } else {
-        // All Complete!
-        this.onPlotterFinished();
+        const settleDelay = Math.round(60 / this.animSpeed);
+        this.currentTimer = setTimeout(() => {
+          if (!this.isPlotting) return;
+          // Once this path's draw animation finishes, remove dasharray so the stroke is 100% complete
+          el.style.transition = 'none';
+          el.style.strokeDasharray = 'none';
+          el.style.strokeDashoffset = 'none';
+          this.runPlotterStep();
+        }, Math.round(durationMs + settleDelay));
+      }, rapidDelay);
+
+    } else {
+      // All paths drawn! Finish animation and immediately show original SVG state
+      if (this.animElements[total - 1]) {
+        this.animElements[total - 1].classList.remove('drawing-active-stroke');
       }
+      this.onPlotterFinished();
     }
   }
 
   onPlotterFinished() {
-    this.animPhase = 3;
     this.isPlotting = false;
 
     this.restoreOriginalAttributes();

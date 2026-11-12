@@ -17,7 +17,7 @@ Open **[http://localhost:8080](http://localhost:8080)** in your browser (or `htt
 ## 🚀 Key Features
 
 - **Artwork Gallery**: Browse vector illustrations by category, search by name, and bookmark favorites.
-- **Plotter Simulation**: Watch artworks drawn stroke-by-stroke with glowing path tracing, followed by sequential color fill blooming.
+- **Plotter Simulation**: Watch artworks drawn stroke-by-stroke with glowing mechanical path tracing, faithfully showing the original SVG upon completion.
 - **Multi-Format Export**:
   - **SVG**: Download clean vector files.
   - **DXF**: Export AutoCAD R12 DXF format ready for CNC plotters, laser cutters, and vinyl cutters.
