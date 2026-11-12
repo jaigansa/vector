@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vector-svg-v9';
+const CACHE_NAME = 'vector-svg-v11';
 const ASSETS = [
   './',
   './index.html',
