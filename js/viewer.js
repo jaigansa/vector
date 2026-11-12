@@ -33,15 +33,27 @@ export class SVGViewer {
     this.animSpeed = speedVal;
   }
 
-  getPinStrokeWidth() {
-    const width = window.innerWidth || document.documentElement.clientWidth || 800;
-    if (width <= 480) {
-      return '1.0px';
-    } else if (width <= 768) {
-      return '1.2px';
+  getPinStrokeWidth(svg) {
+    let vbWidth = 800;
+    const vb = svg?.getAttribute('viewBox');
+    if (vb) {
+      const parts = vb.trim().split(/[\s,]+/).map(Number);
+      if (parts.length === 4 && parts[2] > 0) {
+        vbWidth = parts[2];
+      }
     } else {
-      return '1.4px';
+      const w = parseFloat(svg?.getAttribute('width'));
+      if (w > 0) vbWidth = w;
     }
+    const rect = svg?.getBoundingClientRect();
+    const screenPixelWidth = rect?.width > 0 ? rect.width : 300;
+    const scale = vbWidth / screenPixelWidth;
+
+    // Pin line width: ~1.0px on small mobile, ~1.2px on tablets, ~1.4px on desktop
+    const screenWidth = window.innerWidth || 800;
+    const targetPx = screenWidth <= 480 ? 1.0 : (screenWidth <= 768 ? 1.2 : 1.4);
+
+    return `${(targetPx * scale).toFixed(3)}px`;
   }
 
   restoreOriginalAttributes() {
@@ -65,11 +77,6 @@ export class SVGViewer {
           d.el.setAttribute('stroke-linejoin', d.origStrokeLinejoin);
         } else {
           d.el.removeAttribute('stroke-linejoin');
-        }
-        if (d.origVectorEffect) {
-          d.el.setAttribute('vector-effect', d.origVectorEffect);
-        } else {
-          d.el.removeAttribute('vector-effect');
         }
         d.el.style.removeProperty('--active-neon-stroke');
         d.el.style.removeProperty('--active-neon-glow');
@@ -132,11 +139,10 @@ export class SVGViewer {
       origStrokeWidth: el.getAttribute('stroke-width') || '',
       origStrokeLinecap: el.getAttribute('stroke-linecap') || '',
       origStrokeLinejoin: el.getAttribute('stroke-linejoin') || '',
-      origVectorEffect: el.getAttribute('vector-effect') || '',
       origStyle: el.getAttribute('style') || ''
     }));
 
-    const pinWidth = this.getPinStrokeWidth();
+    const pinWidth = this.getPinStrokeWidth(svg);
     const neonStartIndex = Math.floor(Math.random() * NEON_PALETTE.length);
 
     // Setup initial state: pin line stroke width, random neon colors, rounded caps & joins
@@ -144,10 +150,26 @@ export class SVGViewer {
       let len = 600;
       try {
         if (typeof el.getTotalLength === 'function') {
-          len = Math.max(10, Math.ceil(el.getTotalLength()));
+          const l = el.getTotalLength();
+          if (!isNaN(l) && l > 0) len = Math.ceil(l);
         } else {
           const tag = el.tagName.toLowerCase();
-          if (tag === 'rect') {
+          if (tag === 'polygon' || tag === 'polyline') {
+            const raw = (el.getAttribute('points') || '').trim();
+            const coords = raw.split(/[\s,]+/).map(Number);
+            let polyLen = 0;
+            for (let p = 0; p < coords.length - 2; p += 2) {
+              const dx = coords[p + 2] - coords[p];
+              const dy = coords[p + 3] - coords[p + 1];
+              polyLen += Math.sqrt(dx * dx + dy * dy);
+            }
+            if (tag === 'polygon' && coords.length >= 4) {
+              const dx = coords[0] - coords[coords.length - 2];
+              const dy = coords[1] - coords[coords.length - 1];
+              polyLen += Math.sqrt(dx * dx + dy * dy);
+            }
+            if (polyLen > 0) len = Math.ceil(polyLen);
+          } else if (tag === 'rect') {
             const w = parseFloat(el.getAttribute('width')) || 100;
             const h = parseFloat(el.getAttribute('height')) || 100;
             len = Math.ceil(2 * (w + h));
@@ -158,9 +180,18 @@ export class SVGViewer {
             const rx = parseFloat(el.getAttribute('rx')) || 50;
             const ry = parseFloat(el.getAttribute('ry')) || 50;
             len = Math.ceil(2 * Math.PI * Math.sqrt((rx * rx + ry * ry) / 2));
+          } else if (tag === 'line') {
+            const x1 = parseFloat(el.getAttribute('x1')) || 0;
+            const y1 = parseFloat(el.getAttribute('y1')) || 0;
+            const x2 = parseFloat(el.getAttribute('x2')) || 0;
+            const y2 = parseFloat(el.getAttribute('y2')) || 0;
+            len = Math.ceil(Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2));
           }
         }
       } catch {}
+
+      // Add a slight 2% + 2px buffer to guarantee 100% path coverage
+      const dashLen = Math.ceil(len * 1.02) + 2;
 
       // Assign contrasting random neon color
       const neon = NEON_PALETTE[(neonStartIndex + i) % NEON_PALETTE.length];
@@ -173,14 +204,12 @@ export class SVGViewer {
       el.style.strokeWidth = pinWidth;
       el.style.strokeLinecap = 'round';
       el.style.strokeLinejoin = 'round';
-      el.style.vectorEffect = 'non-scaling-stroke';
-      el.setAttribute('vector-effect', 'non-scaling-stroke');
       el.style.setProperty('--active-neon-stroke', neon.stroke);
       el.style.setProperty('--active-neon-glow', neon.glow);
-      el.style.strokeDasharray = `${len} ${len}`;
-      el.style.strokeDashoffset = `${len}`;
+      el.style.strokeDasharray = `${dashLen} ${dashLen}`;
+      el.style.strokeDashoffset = `${dashLen}`;
       el.style.visibility = 'hidden';
-      el._plotLen = len;
+      el._plotLen = dashLen;
     });
 
     this.animStep = 0;
@@ -233,12 +262,23 @@ export class SVGViewer {
 
           this.animStep++;
           const settleDelay = Math.round(60 / this.animSpeed);
-          this.currentTimer = setTimeout(() => this.runPlotterStep(), Math.round(durationMs + settleDelay));
+          this.currentTimer = setTimeout(() => {
+            if (!this.isPlotting) return;
+            // Once this path's draw animation finishes, remove dasharray so the stroke is 100% complete and fully closed
+            el.style.transition = 'none';
+            el.style.strokeDasharray = 'none';
+            el.style.strokeDashoffset = 'none';
+            this.runPlotterStep();
+          }, Math.round(durationMs + settleDelay));
         }, rapidDelay);
 
       } else {
         // Phase 1 Complete: All paths drawn! Transition to Phase 2 (Color Fill Bloom)
-        this.animElements.forEach(el => el.classList.remove('drawing-active-stroke'));
+        this.animElements.forEach(el => {
+          el.classList.remove('drawing-active-stroke');
+          el.style.strokeDasharray = 'none';
+          el.style.strokeDashoffset = 'none';
+        });
         this.animPhase = 2;
         this.animStep = 0;
 
@@ -282,13 +322,6 @@ export class SVGViewer {
           el.style.strokeWidth = orig.origStrokeWidth || '1px';
           el.style.strokeLinecap = orig.origStrokeLinecap || 'round';
           el.style.strokeLinejoin = orig.origStrokeLinejoin || 'round';
-          if (orig.origVectorEffect) {
-            el.setAttribute('vector-effect', orig.origVectorEffect);
-            el.style.vectorEffect = orig.origVectorEffect;
-          } else {
-            el.removeAttribute('vector-effect');
-            el.style.vectorEffect = '';
-          }
         }
 
         if (i % 2 === 0) this.app.triggerHaptic();
