@@ -527,7 +527,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #ffffff;
+  background: #000000;
   padding: 24px;
   cursor: pointer;
   animation: fullscreenFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -563,14 +563,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #ffffff;
+  background: #000000;
   border-radius: var(--radius-lg, 16px);
   padding: 32px;
   box-shadow: none;
   overflow: hidden;
   box-sizing: border-box;
   cursor: pointer;
-  color: var(--text-primary);
+  color: #ffffff;
 }
 
 .fullscreen-svg-container svg {

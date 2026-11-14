@@ -37,6 +37,10 @@ export class SVGViewer {
     } catch {}
     this.isPlotting = false;
     this.isLoop = false;
+    this.isPingPong = false;
+    this.preventRestore = false;
+    this.playDirection = 1;
+    this.neonPaletteOffset = 0;
     this.loopTimer = null;
     this.activeContainer = null;
     this.animElements = [];
@@ -404,6 +408,9 @@ export class SVGViewer {
     this.activeCard = container.classList.contains('svg-card') ? container : null;
     this.activeItem = item;
     this.isLoop = !!options.loop;
+    this.isPingPong = !!options.pingPong;
+    this.preventRestore = !!options.preventRestore;
+    this.playDirection = 1;
 
     const svg = container.querySelector('svg');
     if (!svg) {
@@ -460,12 +467,13 @@ export class SVGViewer {
   }
 
   setupCardPlot(card, item) {
-    return this.setupPlot(card, item, { loop: false });
+    return this.setupPlot(card, item, { loop: false, pingPong: false, preventRestore: false });
   }
 
   startFullscreenLoop(container, item) {
     this.stopPlotterAnimation();
-    if (!this.setupPlot(container, item, { loop: true })) return;
+    if (!this.setupPlot(container, item, { loop: true, pingPong: true, preventRestore: true })) return;
+    this.playDirection = 1;
     this.setProgress(0, false);
     this.play();
   }
@@ -474,12 +482,12 @@ export class SVGViewer {
     this.animElements.forEach(el => {
       el.classList.remove('drawing-active-stroke');
       el.style.transition = 'none';
-      el.style.fill = 'transparent';
-      el.style.fillOpacity = '0';
-      el.style.stroke = el._neon.stroke;
-      el.style.strokeWidth = el._pinWidth;
-      el.style.strokeLinecap = 'round';
-      el.style.strokeLinejoin = 'round';
+      el.style.setProperty('fill', 'transparent', 'important');
+      el.style.setProperty('fill-opacity', '0', 'important');
+      el.style.setProperty('stroke', el._neon.stroke, 'important');
+      el.style.setProperty('stroke-width', el._pinWidth, 'important');
+      el.style.setProperty('stroke-linecap', 'round', 'important');
+      el.style.setProperty('stroke-linejoin', 'round', 'important');
       el.style.setProperty('--active-neon-stroke', el._neon.stroke);
       el.style.setProperty('--active-neon-glow', el._neon.glow);
       el.style.strokeDasharray = `${el._plotLen} ${el._plotLen}`;
@@ -488,6 +496,18 @@ export class SVGViewer {
       el._drawState = 'hidden';
     });
     this.isRestored = false;
+  }
+
+  cycleNeonPalette() {
+    this.neonPaletteOffset = ((this.neonPaletteOffset || 0) + 1 + Math.floor(Math.random() * (NEON_PALETTE.length - 1))) % NEON_PALETTE.length;
+    this.animElements.forEach((el, i) => {
+      const neon = NEON_PALETTE[(this.neonPaletteOffset + i) % NEON_PALETTE.length];
+      el._neon = neon;
+      el.style.stroke = neon.stroke;
+      el.style.setProperty('stroke', neon.stroke, 'important');
+      el.style.setProperty('--active-neon-stroke', neon.stroke);
+      el.style.setProperty('--active-neon-glow', neon.glow);
+    });
   }
 
   restoreOriginalAttributes() {
@@ -525,14 +545,19 @@ export class SVGViewer {
     }
 
     // When progress reaches 1.0 (100%), restore authentic original SVG state
-    if (progress >= 1.0) {
+    // unless preventRestore is active (e.g. fullscreen preview loop)
+    if (progress >= 1.0 && !this.preventRestore) {
       this.restoreOriginalAttributes();
       return;
     }
 
     // If progress is less than 1.0, ensure stroke styles are active
     if (this.isRestored) {
-      this.setupPlot(this.activeContainer, this.activeItem, { loop: this.isLoop });
+      this.setupPlot(this.activeContainer, this.activeItem, {
+        loop: this.isLoop,
+        pingPong: this.isPingPong,
+        preventRestore: this.preventRestore
+      });
     }
 
     const targetDist = progress * this.totalLength;
@@ -634,6 +659,10 @@ export class SVGViewer {
       cancelAnimationFrame(this.rafId);
       this.rafId = null;
     }
+    if (this.loopTimer) {
+      clearTimeout(this.loopTimer);
+      this.loopTimer = null;
+    }
 
     this.isPlotting = true;
     if (this.activeCard) {
@@ -657,18 +686,67 @@ export class SVGViewer {
       // Realistic plotter animation speed dynamically computed from path length
       const totalDurationMs = this.getDurationMs();
       const deltaProgress = dt / totalDurationMs;
-      const nextProgress = Math.min(1.0, this.currentProgress + deltaProgress);
 
-      this.setProgress(nextProgress, true);
+      if (this.playDirection === -1) {
+        // Rewind mode
+        const nextProgress = Math.max(0.0, this.currentProgress - deltaProgress);
+        this.setProgress(nextProgress, true);
 
-      if (nextProgress >= 1.0) {
-        this.onPlotterFinished();
+        if (nextProgress <= 0.0) {
+          if (this.isPingPong) {
+            this.handlePingPongRewindEnd();
+          } else {
+            this.pause();
+          }
+        } else {
+          this.rafId = requestAnimationFrame(tick);
+        }
       } else {
-        this.rafId = requestAnimationFrame(tick);
+        // Forward play mode
+        const nextProgress = Math.min(1.0, this.currentProgress + deltaProgress);
+        this.setProgress(nextProgress, true);
+
+        if (nextProgress >= 1.0) {
+          if (this.isPingPong) {
+            this.handlePingPongForwardEnd();
+          } else {
+            this.onPlotterFinished();
+          }
+        } else {
+          this.rafId = requestAnimationFrame(tick);
+        }
       }
     };
 
     this.rafId = requestAnimationFrame(tick);
+  }
+
+  handlePingPongForwardEnd() {
+    this.pause();
+    this.currentProgress = 1.0;
+    this.setProgress(1.0, false);
+    this.app?.triggerHaptic?.();
+
+    // Brief hold at 100% drawn state before rewinding
+    this.loopTimer = setTimeout(() => {
+      if (!this.isPingPong || !this.activeContainer) return;
+      this.playDirection = -1;
+      this.play();
+    }, 600);
+  }
+
+  handlePingPongRewindEnd() {
+    this.pause();
+    this.currentProgress = 0.0;
+    this.setProgress(0.0, false);
+
+    // Brief hold at 0% (canvas cleared) before drawing forward again
+    this.loopTimer = setTimeout(() => {
+      if (!this.isPingPong || !this.activeContainer) return;
+      this.cycleNeonPalette();
+      this.playDirection = 1;
+      this.play();
+    }, 400);
   }
 
   pause() {
@@ -699,8 +777,14 @@ export class SVGViewer {
       clearTimeout(this.loopTimer);
       this.loopTimer = null;
     }
+    const shouldRestore = !this.preventRestore;
     this.isLoop = false;
-    this.restoreOriginalAttributes();
+    this.isPingPong = false;
+    this.preventRestore = false;
+    this.playDirection = 1;
+    if (shouldRestore) {
+      this.restoreOriginalAttributes();
+    }
 
     if (this.activeCard) {
       const slider = this.activeCard.querySelector('.plot-draw-slider');
