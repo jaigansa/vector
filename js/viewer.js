@@ -22,35 +22,97 @@ export class SVGViewer {
     this.activeItem = null;
     this.activeSvg = null;
     this.originalSvgHTML = null;
+    this.speedOptions = [1.0, 2.0, 4.0, 0.5];
+    this.speedIndex = 0;
     this.animSpeed = 1.0;
+    try {
+      const saved = parseFloat(localStorage.getItem('vector_plot_speed'));
+      const idx = this.speedOptions.indexOf(saved);
+      if (idx !== -1) {
+        this.speedIndex = idx;
+        this.animSpeed = saved;
+      }
+    } catch {}
     this.isPlotting = false;
+    this.isLoop = false;
+    this.loopTimer = null;
+    this.activeContainer = null;
     this.animElements = [];
     this.totalLength = 0;
+    this.visualLength = 0;
+    this.scale = 1.0;
     this.currentProgress = 0;
     this.rafId = null;
     this.isRestored = true;
   }
 
-  getPinStrokeWidth(svg) {
-    let vbWidth = 800;
+  computeScale(svg) {
+    let vbWidth = 0;
+    let vbHeight = 0;
     const vb = svg?.getAttribute('viewBox');
     if (vb) {
       const parts = vb.trim().split(/[\s,]+/).map(Number);
-      if (parts.length === 4 && parts[2] > 0) {
+      if (parts.length === 4 && parts[2] > 0 && parts[3] > 0) {
         vbWidth = parts[2];
+        vbHeight = parts[3];
       }
-    } else {
+    }
+    if (!vbWidth) {
       const w = parseFloat(svg?.getAttribute('width'));
       if (w > 0) vbWidth = w;
+      const h = parseFloat(svg?.getAttribute('height'));
+      if (h > 0) vbHeight = h;
     }
+
     const rect = svg?.getBoundingClientRect();
     const screenPixelWidth = rect?.width > 0 ? rect.width : 300;
-    const scale = vbWidth / screenPixelWidth;
+    const screenPixelHeight = rect?.height > 0 ? rect.height : 220;
 
+    if (!vbWidth) vbWidth = 800;
+    if (!vbHeight) vbHeight = 600;
+
+    // SVG preserveAspectRatio default is "xMidYMid meet"
+    // The scale factor is max(vbWidth / screenPixelWidth, vbHeight / screenPixelHeight)
+    const scaleX = vbWidth / screenPixelWidth;
+    const scaleY = vbHeight / screenPixelHeight;
+    const scale = Math.max(scaleX, scaleY);
+
+    return Math.max(0.001, scale);
+  }
+
+  getPinStrokeWidth(svg) {
+    const scale = this.computeScale(svg);
     const screenWidth = window.innerWidth || 800;
     const targetPx = screenWidth <= 480 ? 1.0 : (screenWidth <= 768 ? 1.2 : 1.4);
 
     return `${(targetPx * scale).toFixed(3)}px`;
+  }
+
+  cycleSpeed() {
+    this.speedIndex = (this.speedIndex + 1) % this.speedOptions.length;
+    this.animSpeed = this.speedOptions[this.speedIndex];
+    try {
+      localStorage.setItem('vector_plot_speed', String(this.animSpeed));
+    } catch {}
+    return this.animSpeed;
+  }
+
+  setSpeed(speedVal) {
+    const idx = this.speedOptions.indexOf(speedVal);
+    if (idx !== -1) {
+      this.speedIndex = idx;
+      this.animSpeed = speedVal;
+    } else {
+      this.animSpeed = Math.max(0.1, speedVal);
+    }
+    try {
+      localStorage.setItem('vector_plot_speed', String(this.animSpeed));
+    } catch {}
+  }
+
+  getSpeedLabel() {
+    const s = this.animSpeed;
+    return s === 0.5 ? '0.5x' : `${s}x`;
   }
 
   getElementLength(el) {
@@ -92,30 +154,224 @@ export class SVGViewer {
         const x2 = parseFloat(el.getAttribute('x2')) || 0;
         const y2 = parseFloat(el.getAttribute('y2')) || 0;
         return Math.ceil(Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2));
+      } else if (tag === 'path') {
+        const d = el.getAttribute('d') || '';
+        const nums = d.match(/[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?/g);
+        if (nums && nums.length >= 4) {
+          let est = 0;
+          for (let p = 0; p < nums.length - 3; p += 2) {
+            const dx = parseFloat(nums[p + 2]) - parseFloat(nums[p]);
+            const dy = parseFloat(nums[p + 3]) - parseFloat(nums[p + 1]);
+            est += Math.sqrt(dx * dx + dy * dy);
+          }
+          if (est > 0) return Math.ceil(est);
+        }
       }
     } catch {}
     return 600;
   }
 
-  setupCardPlot(card, item) {
-    if (this.activeCard && this.activeCard !== card) {
+  splitSubpaths(d) {
+    if (!d) return [];
+    const moveMatches = d.match(/[Mm]/g);
+    if (!moveMatches || moveMatches.length <= 1) return [d];
+
+    const tokens = d.match(/([MmLlHhVvCcSsQqTtAaZz]|[-+]?(?:\d*\.\d+|\d+)(?:[eE][-+]?\d+)?)/g);
+    if (!tokens || tokens.length === 0) return [d];
+
+    const subpaths = [];
+    let currentTokens = [];
+    let curX = 0, curY = 0;
+    let startX = 0, startY = 0;
+    let i = 0;
+    const n = tokens.length;
+
+    while (i < n) {
+      const tok = tokens[i];
+      if (/^[MmLlHhVvCcSsQqTtAaZz]$/.test(tok)) {
+        const cmd = tok;
+        i++;
+        if (cmd === 'M' || cmd === 'm') {
+          if (currentTokens.length > 0) {
+            subpaths.push(currentTokens.join(' '));
+            currentTokens = [];
+          }
+          let x = parseFloat(tokens[i]);
+          let y = parseFloat(tokens[i + 1]);
+          i += 2;
+          if (cmd === 'm') {
+            curX += x;
+            curY += y;
+          } else {
+            curX = x;
+            curY = y;
+          }
+          startX = curX;
+          startY = curY;
+          currentTokens.push(`M ${curX.toFixed(4)} ${curY.toFixed(4)}`);
+          while (i + 1 < n && !/^[MmLlHhVvCcSsQqTtAaZz]$/.test(tokens[i])) {
+            const lx = parseFloat(tokens[i]);
+            const ly = parseFloat(tokens[i + 1]);
+            i += 2;
+            if (cmd === 'm') {
+              curX += lx;
+              curY += ly;
+            } else {
+              curX = lx;
+              curY = ly;
+            }
+            currentTokens.push(`L ${curX.toFixed(4)} ${curY.toFixed(4)}`);
+          }
+        } else if (cmd === 'Z' || cmd === 'z') {
+          currentTokens.push(cmd);
+          curX = startX;
+          curY = startY;
+        } else if (cmd === 'H' || cmd === 'h') {
+          while (i < n && !/^[MmLlHhVvCcSsQqTtAaZz]$/.test(tokens[i])) {
+            const val = parseFloat(tokens[i]);
+            i++;
+            curX = (cmd === 'h') ? (curX + val) : val;
+            currentTokens.push(`H ${curX.toFixed(4)}`);
+          }
+        } else if (cmd === 'V' || cmd === 'v') {
+          while (i < n && !/^[MmLlHhVvCcSsQqTtAaZz]$/.test(tokens[i])) {
+            const val = parseFloat(tokens[i]);
+            i++;
+            curY = (cmd === 'v') ? (curY + val) : val;
+            currentTokens.push(`V ${curY.toFixed(4)}`);
+          }
+        } else if (cmd === 'L' || cmd === 'l' || cmd === 'T' || cmd === 't') {
+          while (i + 1 < n && !/^[MmLlHhVvCcSsQqTtAaZz]$/.test(tokens[i])) {
+            const x = parseFloat(tokens[i]);
+            const y = parseFloat(tokens[i + 1]);
+            i += 2;
+            if (cmd === 'l' || cmd === 't') {
+              curX += x;
+              curY += y;
+            } else {
+              curX = x;
+              curY = y;
+            }
+            currentTokens.push(`L ${curX.toFixed(4)} ${curY.toFixed(4)}`);
+          }
+        } else if (cmd === 'C' || cmd === 'c') {
+          while (i + 5 < n && !/^[MmLlHhVvCcSsQqTtAaZz]$/.test(tokens[i])) {
+            const x1 = parseFloat(tokens[i]);
+            const y1 = parseFloat(tokens[i + 1]);
+            const x2 = parseFloat(tokens[i + 2]);
+            const y2 = parseFloat(tokens[i + 3]);
+            const x = parseFloat(tokens[i + 4]);
+            const y = parseFloat(tokens[i + 5]);
+            i += 6;
+            if (cmd === 'c') {
+              currentTokens.push(`C ${(curX + x1).toFixed(4)} ${(curY + y1).toFixed(4)} ${(curX + x2).toFixed(4)} ${(curY + y2).toFixed(4)} ${(curX + x).toFixed(4)} ${(curY + y).toFixed(4)}`);
+              curX += x;
+              curY += y;
+            } else {
+              currentTokens.push(`C ${x1.toFixed(4)} ${y1.toFixed(4)} ${x2.toFixed(4)} ${y2.toFixed(4)} ${x.toFixed(4)} ${y.toFixed(4)}`);
+              curX = x;
+              curY = y;
+            }
+          }
+        } else if (cmd === 'S' || cmd === 's' || cmd === 'Q' || cmd === 'q') {
+          while (i + 3 < n && !/^[MmLlHhVvCcSsQqTtAaZz]$/.test(tokens[i])) {
+            const x1 = parseFloat(tokens[i]);
+            const y1 = parseFloat(tokens[i + 1]);
+            const x = parseFloat(tokens[i + 2]);
+            const y = parseFloat(tokens[i + 3]);
+            i += 4;
+            const op = cmd.toUpperCase();
+            if (cmd === 's' || cmd === 'q') {
+              currentTokens.push(`${op} ${(curX + x1).toFixed(4)} ${(curY + y1).toFixed(4)} ${(curX + x).toFixed(4)} ${(curY + y).toFixed(4)}`);
+              curX += x;
+              curY += y;
+            } else {
+              currentTokens.push(`${op} ${x1.toFixed(4)} ${y1.toFixed(4)} ${x.toFixed(4)} ${y.toFixed(4)}`);
+              curX = x;
+              curY = y;
+            }
+          }
+        } else if (cmd === 'A' || cmd === 'a') {
+          while (i + 6 < n && !/^[MmLlHhVvCcSsQqTtAaZz]$/.test(tokens[i])) {
+            const rx = tokens[i];
+            const ry = tokens[i + 1];
+            const rot = tokens[i + 2];
+            const la = tokens[i + 3];
+            const sw = tokens[i + 4];
+            const x = parseFloat(tokens[i + 5]);
+            const y = parseFloat(tokens[i + 6]);
+            i += 7;
+            if (cmd === 'a') {
+              curX += x;
+              curY += y;
+            } else {
+              curX = x;
+              curY = y;
+            }
+            currentTokens.push(`A ${rx} ${ry} ${rot} ${la} ${sw} ${curX.toFixed(4)} ${curY.toFixed(4)}`);
+          }
+        }
+      } else {
+        i++;
+      }
+    }
+
+    if (currentTokens.length > 0) {
+      subpaths.push(currentTokens.join(' '));
+    }
+    return subpaths.length > 0 ? subpaths : [d];
+  }
+
+  decomposeCompoundPaths(svg) {
+    const paths = Array.from(svg.querySelectorAll('path')).filter(p => !p.closest('defs'));
+    paths.forEach(pathEl => {
+      const d = pathEl.getAttribute('d');
+      if (!d) return;
+      const subpaths = this.splitSubpaths(d);
+      if (subpaths.length <= 1) return;
+
+      const parent = pathEl.parentNode;
+      if (!parent) return;
+
+      const frag = document.createDocumentFragment();
+      const transform = pathEl.getAttribute('transform');
+      subpaths.forEach(subD => {
+        const newPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        newPath.setAttribute('d', subD);
+        if (transform) newPath.setAttribute('transform', transform);
+        frag.appendChild(newPath);
+      });
+
+      parent.replaceChild(frag, pathEl);
+    });
+  }
+
+  setupPlot(container, item, options = {}) {
+    if (this.activeContainer && this.activeContainer !== container) {
       this.stopPlotterAnimation();
     }
 
-    this.activeCard = card;
+    this.activeContainer = container;
+    this.activeCard = container.classList.contains('svg-card') ? container : null;
     this.activeItem = item;
+    this.isLoop = !!options.loop;
 
-    const svg = card.querySelector('.svg-card-preview svg');
+    const svg = container.querySelector('svg');
     if (!svg) return false;
 
     this.activeSvg = svg;
     this.originalSvgHTML = item.content || svg.outerHTML;
+
+    // Decompose compound multi-subpath paths into individual <path> elements
+    // so a simulation plotter pen draws each subpath sequentially instead of all at the same time
+    this.decomposeCompoundPaths(svg);
 
     this.animElements = Array.from(svg.querySelectorAll('path, polygon, polyline, circle, rect, ellipse, line'))
       .filter(el => !el.closest('defs'));
 
     if (this.animElements.length === 0) return false;
 
+    this.scale = this.computeScale(svg);
     const pinWidth = this.getPinStrokeWidth(svg);
     const neonStartIndex = Math.floor(Math.random() * NEON_PALETTE.length);
 
@@ -131,12 +387,25 @@ export class SVGViewer {
       el._cumEnd = cum;
       el._neon = neon;
       el._pinWidth = pinWidth;
+      el._drawState = 'hidden';
     });
 
     this.totalLength = Math.max(1, cum);
+    this.visualLength = this.totalLength / this.scale;
     this.applyPlotStyles();
     this.isRestored = false;
     return true;
+  }
+
+  setupCardPlot(card, item) {
+    return this.setupPlot(card, item, { loop: false });
+  }
+
+  startFullscreenLoop(container, item) {
+    this.stopPlotterAnimation();
+    if (!this.setupPlot(container, item, { loop: true })) return;
+    this.setProgress(0, false);
+    this.play();
   }
 
   applyPlotStyles() {
@@ -154,6 +423,7 @@ export class SVGViewer {
       el.style.strokeDasharray = `${el._plotLen} ${el._plotLen}`;
       el.style.strokeDashoffset = `${el._plotLen}`;
       el.style.visibility = 'hidden';
+      el._drawState = 'hidden';
     });
     this.isRestored = false;
   }
@@ -200,7 +470,7 @@ export class SVGViewer {
 
     // If progress is less than 1.0, ensure stroke styles are active
     if (this.isRestored) {
-      this.setupCardPlot(this.activeCard, this.activeItem);
+      this.setupPlot(this.activeContainer, this.activeItem, { loop: this.isLoop });
     }
 
     const targetDist = progress * this.totalLength;
@@ -213,21 +483,30 @@ export class SVGViewer {
 
       if (targetDist <= start) {
         // Element not reached yet
-        el.style.visibility = 'hidden';
-        el.style.strokeDashoffset = `${len}`;
-        el.classList.remove('drawing-active-stroke');
+        if (el._drawState !== 'hidden') {
+          el.style.visibility = 'hidden';
+          el.style.strokeDashoffset = `${len}`;
+          el.classList.remove('drawing-active-stroke');
+          el._drawState = 'hidden';
+        }
       } else if (targetDist >= end) {
         // Element fully drawn
-        el.style.visibility = 'visible';
-        el.style.strokeDashoffset = '0';
-        el.classList.remove('drawing-active-stroke');
+        if (el._drawState !== 'done') {
+          el.style.visibility = 'visible';
+          el.style.strokeDashoffset = '0';
+          el.classList.remove('drawing-active-stroke');
+          el._drawState = 'done';
+        }
       } else {
-        // Element actively being drawn
+        // Element actively being drawn by simulation plotter
         const drawn = targetDist - start;
         const offset = Math.max(0, len - drawn);
         el.style.visibility = 'visible';
         el.style.strokeDashoffset = `${offset.toFixed(1)}`;
-        el.classList.add('drawing-active-stroke');
+        if (el._drawState !== 'drawing') {
+          el.classList.add('drawing-active-stroke');
+          el._drawState = 'drawing';
+        }
       }
     }
   }
@@ -267,29 +546,50 @@ export class SVGViewer {
     this.app.triggerHaptic();
   }
 
-  play() {
-    if (!this.activeCard) return;
+  getDurationMs() {
+    // Calibrated physical drawing feed rate in screen pixels per second.
+    // Represents the physical speed of the pen plotter head across the drawing canvas.
+    const feedRate = 1200; // visual screen px / second at 1x speed
+    const visLen = this.visualLength || (this.totalLength / (this.scale || 1));
 
-    this.isPlotting = true;
-    this.activeCard.classList.add('is-plotting');
-
-    const playBtn = this.activeCard.querySelector('.btn-plot-play');
-    if (playBtn) {
-      playBtn.classList.add('is-playing');
-      playBtn.setAttribute('title', 'Pause Draw');
-      playBtn.setAttribute('aria-label', 'Pause animation');
+    let baseSec;
+    if (visLen <= 8000) {
+      baseSec = visLen / feedRate;
+    } else {
+      // Soft sub-linear scaling for massive CAD/CNC drawings with tens of thousands of points
+      const extra = visLen - 8000;
+      baseSec = (8000 + Math.pow(extra, 0.82) * 4.5) / feedRate;
     }
 
-    // Animation duration based on path length, adjusted by speed
-    const totalDurationMs = Math.max(2200, Math.min(5000, this.totalLength * 1.6)) / this.animSpeed;
+    // Minimum 1.0s so very simple paths are clearly visible
+    const clampedSec = Math.max(1.0, baseSec);
+    return (clampedSec * 1000) / this.animSpeed;
+  }
+
+  play() {
+    if (!this.activeContainer) return;
+
+    this.isPlotting = true;
+    if (this.activeCard) {
+      this.activeCard.classList.add('is-plotting');
+      const playBtn = this.activeCard.querySelector('.btn-plot-play');
+      if (playBtn) {
+        playBtn.classList.add('is-playing');
+        playBtn.setAttribute('title', 'Pause Draw');
+        playBtn.setAttribute('aria-label', 'Pause animation');
+      }
+    }
+
     let lastTime = performance.now();
 
     const tick = (now) => {
       if (!this.isPlotting) return;
 
-      const dt = now - lastTime;
+      const dt = Math.min(100, now - lastTime);
       lastTime = now;
 
+      // Realistic plotter animation speed dynamically computed from path length
+      const totalDurationMs = this.getDurationMs();
       const deltaProgress = dt / totalDurationMs;
       const nextProgress = Math.min(1.0, this.currentProgress + deltaProgress);
 
@@ -311,6 +611,10 @@ export class SVGViewer {
       cancelAnimationFrame(this.rafId);
       this.rafId = null;
     }
+    if (this.loopTimer) {
+      clearTimeout(this.loopTimer);
+      this.loopTimer = null;
+    }
 
     if (this.activeCard) {
       this.activeCard.classList.remove('is-plotting');
@@ -325,6 +629,11 @@ export class SVGViewer {
 
   stopPlotterAnimation() {
     this.pause();
+    if (this.loopTimer) {
+      clearTimeout(this.loopTimer);
+      this.loopTimer = null;
+    }
+    this.isLoop = false;
     this.restoreOriginalAttributes();
 
     if (this.activeCard) {
@@ -339,6 +648,7 @@ export class SVGViewer {
       }
     }
 
+    this.activeContainer = null;
     this.activeCard = null;
     this.activeItem = null;
     this.activeSvg = null;
@@ -346,6 +656,8 @@ export class SVGViewer {
     this.animElements = [];
     this.currentProgress = 0;
     this.totalLength = 0;
+    this.visualLength = 0;
+    this.scale = 1.0;
   }
 
   onPlotterFinished() {
@@ -353,5 +665,14 @@ export class SVGViewer {
     this.currentProgress = 1.0;
     this.setProgress(1.0, true);
     this.app.triggerHaptic();
+
+    if (this.isLoop && this.activeContainer) {
+      this.loopTimer = setTimeout(() => {
+        if (!this.isLoop || !this.activeContainer) return;
+        if (!this.setupPlot(this.activeContainer, this.activeItem, { loop: true })) return;
+        this.setProgress(0, false);
+        this.play();
+      }, 1000);
+    }
   }
 }

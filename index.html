@@ -36,6 +36,28 @@
           </div>
           <span>Vector</span>
         </div>
+
+        <div class="header-actions">
+          <button id="grid-mode-btn" class="header-action-btn" title="Toggle 3-grid gallery mode (1:1 preview only)" aria-label="Toggle 3-grid gallery mode" aria-pressed="false">
+            <svg class="icon-gallery-view" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="4.5" height="4.5" rx="1"/>
+              <rect x="9.75" y="3" width="4.5" height="4.5" rx="1"/>
+              <rect x="16.5" y="3" width="4.5" height="4.5" rx="1"/>
+              <rect x="3" y="9.75" width="4.5" height="4.5" rx="1"/>
+              <rect x="9.75" y="9.75" width="4.5" height="4.5" rx="1"/>
+              <rect x="16.5" y="9.75" width="4.5" height="4.5" rx="1"/>
+              <rect x="3" y="16.5" width="4.5" height="4.5" rx="1"/>
+              <rect x="9.75" y="16.5" width="4.5" height="4.5" rx="1"/>
+              <rect x="16.5" y="16.5" width="4.5" height="4.5" rx="1"/>
+            </svg>
+            <svg class="icon-standard-view" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/>
+              <rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/>
+              <rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/>
+              <rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/>
+            </svg>
+          </button>
+        </div>
       </header>
 
       <!-- Search Section with Integrated Category Dropdown -->
@@ -91,6 +113,13 @@
       </div>
 
     </main>
+  </div>
+
+  <!-- Fullscreen Artwork Preview Overlay -->
+  <div id="fullscreen-overlay" class="fullscreen-overlay" style="display: none;" role="dialog" aria-modal="true" aria-label="Fullscreen artwork preview">
+    <div class="fullscreen-content">
+      <div class="fullscreen-svg-container" id="fullscreen-svg-container"></div>
+    </div>
   </div>
 
   <!-- Application Scripts -->

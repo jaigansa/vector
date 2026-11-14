@@ -29,6 +29,46 @@
   }
 }
 
+/* 3-Grid Gallery Mode: Exactly 3 columns, 1:1 square ratio, preview only */
+.svg-grid.gallery-mode {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .svg-grid.gallery-mode {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px;
+  }
+}
+
+.svg-grid.gallery-mode .svg-card-info {
+  display: none !important;
+}
+
+.svg-grid.gallery-mode .svg-card {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.svg-grid.gallery-mode .svg-card:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.svg-grid.gallery-mode .svg-card-preview {
+  aspect-ratio: 1 / 1 !important;
+  border-radius: var(--radius-md) !important;
+  padding: 12px;
+}
+
+@media (max-width: 640px) {
+  .svg-grid.gallery-mode .svg-card-preview {
+    padding: 8px;
+  }
+}
+
 /* SVG Artwork Card */
 .svg-card {
   background: var(--bg-card);
@@ -77,6 +117,48 @@
 
 .svg-card:hover .svg-card-preview > svg:first-child {
   transform: scale(1.04);
+}
+
+/* Fullscreen Button on Card Preview */
+.btn-preview-fullscreen {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--text-secondary);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  opacity: 0.8;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 5;
+}
+
+.svg-card:hover .btn-preview-fullscreen,
+.btn-preview-fullscreen:focus-visible {
+  opacity: 1;
+}
+
+.btn-preview-fullscreen:hover {
+  opacity: 1;
+  background: var(--accent-color);
+  color: #ffffff;
+  border-color: var(--accent-color);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+  transform: scale(1.08);
+}
+
+.btn-preview-fullscreen:active {
+  transform: scale(0.94);
 }
 
 /* Artwork Info Section */
@@ -167,6 +249,38 @@
 
 .btn-card-action.btn-plot-play.is-playing .icon-pause {
   display: block;
+}
+
+.btn-card-action.btn-plot-speed {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  flex: 0 0 32px;
+  background: rgba(99, 102, 241, 0.06);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.btn-card-action.btn-plot-speed:hover {
+  background: rgba(99, 102, 241, 0.14);
+  color: var(--accent-color);
+  border-color: rgba(99, 102, 241, 0.35);
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.15);
+}
+
+.btn-card-action.btn-plot-speed:active {
+  transform: scale(0.94);
 }
 
 /* Draw Scrub Slider Component */
@@ -373,4 +487,70 @@
   font-size: 14px;
   max-width: 320px;
   line-height: 1.4;
+}
+
+/* ==========================================================================
+   FULLSCREEN PREVIEW MODAL OVERLAY
+   ========================================================================== */
+.fullscreen-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  padding: 24px;
+  cursor: pointer;
+  animation: fullscreenFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+@keyframes fullscreenFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.fullscreen-content {
+  width: 100%;
+  height: 100%;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.fullscreen-svg-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border-radius: var(--radius-lg, 16px);
+  padding: 32px;
+  box-shadow: none;
+  overflow: hidden;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.fullscreen-svg-container svg {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
 }

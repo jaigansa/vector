@@ -95,6 +95,60 @@ html, body {
   height: 100%;
 }
 
+/* Header Actions & Grid Mode Toggle (Icon only, transparent background) */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: #000000;
+  border: none;
+  padding: 6px;
+  cursor: pointer;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  user-select: none;
+  touch-action: manipulation;
+  border-radius: var(--radius-sm);
+  opacity: 0.85;
+}
+
+.header-action-btn:hover {
+  background: transparent;
+  color: #000000;
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.header-action-btn.active {
+  background: transparent;
+  color: #000000;
+  opacity: 1;
+  box-shadow: none;
+}
+
+.header-action-btn:active {
+  transform: scale(0.92);
+}
+
+/* Icon shape changes between standard view and 3-grid gallery view */
+.header-action-btn .icon-standard-view {
+  display: none;
+}
+
+.header-action-btn.active .icon-gallery-view {
+  display: none;
+}
+
+.header-action-btn.active .icon-standard-view {
+  display: block;
+}
+
 /* Search Bar & Filter Bar with Integrated Category Dropdown */
 .search-filter-section {
   flex-shrink: 0;

@@ -26,6 +26,33 @@ class App {
     this.emptyState = document.getElementById('empty-state');
     this.searchInput = document.getElementById('search-input');
     this.searchClearBtn = document.getElementById('search-clear-btn');
+    this.fullscreenOverlay = document.getElementById('fullscreen-overlay');
+    this.fullscreenSvgContainer = document.getElementById('fullscreen-svg-container');
+
+    // Click anywhere on fullscreen overlay exits fullscreen
+    this.fullscreenOverlay?.addEventListener('click', () => {
+      this.closeFullscreen();
+    });
+
+    // Escape key exits fullscreen
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.fullscreenOverlay && this.fullscreenOverlay.style.display === 'flex') {
+        this.closeFullscreen();
+      }
+    });
+
+    // 3-Grid Gallery Mode Toggle (1:1 preview only)
+    this.gridModeBtn = document.getElementById('grid-mode-btn');
+    this.isGalleryMode = localStorage.getItem('vector_gallery_mode') === 'true';
+    if (this.isGalleryMode) {
+      this.grid?.classList.add('gallery-mode');
+      this.gridModeBtn?.classList.add('active');
+      this.gridModeBtn?.setAttribute('aria-pressed', 'true');
+    }
+
+    this.gridModeBtn?.addEventListener('click', () => {
+      this.toggleGalleryMode();
+    });
 
     this.bindEvents();
     this.cleanupServiceWorker();
@@ -215,6 +242,51 @@ class App {
     });
   }
 
+  openFullscreen(item) {
+    if (!this.fullscreenOverlay || !this.fullscreenSvgContainer) return;
+    this.closeAllCardMenus();
+    this.fullscreenSvgContainer.innerHTML = item.content;
+    this.fullscreenOverlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    // Auto-play plotter drawing animation on continuous loop
+    this.viewer.startFullscreenLoop(this.fullscreenSvgContainer, item);
+
+    if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+  }
+
+  closeFullscreen() {
+    if (!this.fullscreenOverlay || !this.fullscreenSvgContainer) return;
+    // Stop any active fullscreen loop animation
+    this.viewer.stopPlotterAnimation();
+
+    this.fullscreenOverlay.style.display = 'none';
+    this.fullscreenSvgContainer.innerHTML = '';
+    document.body.style.overflow = '';
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
+  }
+
+  toggleGalleryMode() {
+    this.triggerHaptic();
+    this.isGalleryMode = !this.isGalleryMode;
+    if (this.isGalleryMode) {
+      this.grid?.classList.add('gallery-mode');
+      this.gridModeBtn?.classList.add('active');
+      this.gridModeBtn?.setAttribute('aria-pressed', 'true');
+    } else {
+      this.grid?.classList.remove('gallery-mode');
+      this.gridModeBtn?.classList.remove('active');
+      this.gridModeBtn?.setAttribute('aria-pressed', 'false');
+    }
+    try {
+      localStorage.setItem('vector_gallery_mode', String(this.isGalleryMode));
+    } catch {}
+  }
+
   filterAndRender() {
     let items = [...this.library.items];
 
@@ -258,6 +330,14 @@ class App {
         <div class="svg-card" data-id="${item.id}">
           <div class="svg-card-preview">
             ${item.content}
+            <button class="btn-preview-fullscreen" data-action="preview-fullscreen" data-id="${item.id}" title="View fullscreen" aria-label="Open fullscreen preview">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <polyline points="9 21 3 21 3 15"></polyline>
+                <line x1="21" y1="3" x2="14" y2="10"></line>
+                <line x1="3" y1="21" x2="10" y2="14"></line>
+              </svg>
+            </button>
           </div>
           <div class="svg-card-info">
             <span class="svg-card-name" title="${item.displayName}">${item.displayName}</span>
@@ -270,6 +350,9 @@ class App {
                   <rect x="6" y="5" width="4" height="14" rx="1"></rect>
                   <rect x="14" y="5" width="4" height="14" rx="1"></rect>
                 </svg>
+              </button>
+              <button class="btn-card-action btn-plot-speed" data-action="toggle-speed" data-id="${item.id}" title="Plotter speed: ${this.viewer.getSpeedLabel()} (Click to cycle 1x / 2x / 4x / 0.5x)" aria-label="Change plot speed">
+                <span class="speed-label">${this.viewer.getSpeedLabel()}</span>
               </button>
               <div class="plot-slider-wrapper">
                 <input type="range" class="plot-draw-slider" min="0" max="100" value="0" step="0.5" data-id="${item.id}" title="Draw progression" aria-label="Draw progression slider" style="--slider-pct: 0%;">
@@ -340,10 +423,24 @@ class App {
         if (actionBtn) {
           e.stopPropagation();
           const action = actionBtn.dataset.action;
-          if (action === 'toggle-play') {
+          if (action === 'preview-fullscreen') {
+            this.triggerHaptic();
+            this.openFullscreen(item);
+            return;
+          } else if (action === 'toggle-play') {
             this.closeAllCardMenus();
             this.triggerHaptic();
             this.viewer.toggleCardPlot(card, item);
+          } else if (action === 'toggle-speed') {
+            this.triggerHaptic();
+            this.viewer.cycleSpeed();
+            const label = this.viewer.getSpeedLabel();
+            this.grid.querySelectorAll('.btn-plot-speed .speed-label').forEach(el => {
+              el.textContent = label;
+            });
+            this.grid.querySelectorAll('.btn-plot-speed').forEach(btn => {
+              btn.setAttribute('title', `Plotter speed: ${label} (Click to cycle 1x / 2x / 4x / 0.5x)`);
+            });
           } else if (action === 'toggle-menu') {
             this.triggerHaptic();
             const wrapper = actionBtn.closest('.card-menu-wrapper');
