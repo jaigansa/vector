@@ -3,6 +3,8 @@
  * Synchronized with interactive draw scrubber slider and automatic stroke animation.
  */
 
+import { resolveUseElements } from './export.js';
+
 const NEON_PALETTE = [
   { stroke: '#00f5ff', glow: 'rgba(0, 245, 255, 0.7)' },   // Electric Cyan
   { stroke: '#39ff14', glow: 'rgba(57, 255, 20, 0.7)' },   // Neon Lime
@@ -213,6 +215,7 @@ export class SVGViewer {
             const lx = parseFloat(tokens[i]);
             const ly = parseFloat(tokens[i + 1]);
             i += 2;
+            if (isNaN(lx) || isNaN(ly)) break;
             if (cmd === 'm') {
               curX += lx;
               curY += ly;
@@ -230,6 +233,7 @@ export class SVGViewer {
           while (i < n && !/^[MmLlHhVvCcSsQqTtAaZz]$/.test(tokens[i])) {
             const val = parseFloat(tokens[i]);
             i++;
+            if (isNaN(val)) break;
             curX = (cmd === 'h') ? (curX + val) : val;
             currentTokens.push(`H ${curX.toFixed(4)}`);
           }
@@ -237,15 +241,17 @@ export class SVGViewer {
           while (i < n && !/^[MmLlHhVvCcSsQqTtAaZz]$/.test(tokens[i])) {
             const val = parseFloat(tokens[i]);
             i++;
+            if (isNaN(val)) break;
             curY = (cmd === 'v') ? (curY + val) : val;
             currentTokens.push(`V ${curY.toFixed(4)}`);
           }
-        } else if (cmd === 'L' || cmd === 'l' || cmd === 'T' || cmd === 't') {
+        } else if (cmd === 'L' || cmd === 'l') {
           while (i + 1 < n && !/^[MmLlHhVvCcSsQqTtAaZz]$/.test(tokens[i])) {
             const x = parseFloat(tokens[i]);
             const y = parseFloat(tokens[i + 1]);
             i += 2;
-            if (cmd === 'l' || cmd === 't') {
+            if (isNaN(x) || isNaN(y)) break;
+            if (cmd === 'l') {
               curX += x;
               curY += y;
             } else {
@@ -253,6 +259,21 @@ export class SVGViewer {
               curY = y;
             }
             currentTokens.push(`L ${curX.toFixed(4)} ${curY.toFixed(4)}`);
+          }
+        } else if (cmd === 'T' || cmd === 't') {
+          while (i + 1 < n && !/^[MmLlHhVvCcSsQqTtAaZz]$/.test(tokens[i])) {
+            const x = parseFloat(tokens[i]);
+            const y = parseFloat(tokens[i + 1]);
+            i += 2;
+            if (isNaN(x) || isNaN(y)) break;
+            if (cmd === 't') {
+              curX += x;
+              curY += y;
+            } else {
+              curX = x;
+              curY = y;
+            }
+            currentTokens.push(`T ${curX.toFixed(4)} ${curY.toFixed(4)}`);
           }
         } else if (cmd === 'C' || cmd === 'c') {
           while (i + 5 < n && !/^[MmLlHhVvCcSsQqTtAaZz]$/.test(tokens[i])) {
@@ -263,6 +284,7 @@ export class SVGViewer {
             const x = parseFloat(tokens[i + 4]);
             const y = parseFloat(tokens[i + 5]);
             i += 6;
+            if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2) || isNaN(x) || isNaN(y)) break;
             if (cmd === 'c') {
               currentTokens.push(`C ${(curX + x1).toFixed(4)} ${(curY + y1).toFixed(4)} ${(curX + x2).toFixed(4)} ${(curY + y2).toFixed(4)} ${(curX + x).toFixed(4)} ${(curY + y).toFixed(4)}`);
               curX += x;
@@ -273,34 +295,53 @@ export class SVGViewer {
               curY = y;
             }
           }
-        } else if (cmd === 'S' || cmd === 's' || cmd === 'Q' || cmd === 'q') {
+        } else if (cmd === 'S' || cmd === 's') {
+          while (i + 3 < n && !/^[MmLlHhVvCcSsQqTtAaZz]$/.test(tokens[i])) {
+            const x2 = parseFloat(tokens[i]);
+            const y2 = parseFloat(tokens[i + 1]);
+            const x = parseFloat(tokens[i + 2]);
+            const y = parseFloat(tokens[i + 3]);
+            i += 4;
+            if (isNaN(x2) || isNaN(y2) || isNaN(x) || isNaN(y)) break;
+            if (cmd === 's') {
+              currentTokens.push(`S ${(curX + x2).toFixed(4)} ${(curY + y2).toFixed(4)} ${(curX + x).toFixed(4)} ${(curY + y).toFixed(4)}`);
+              curX += x;
+              curY += y;
+            } else {
+              currentTokens.push(`S ${x2.toFixed(4)} ${y2.toFixed(4)} ${x.toFixed(4)} ${y.toFixed(4)}`);
+              curX = x;
+              curY = y;
+            }
+          }
+        } else if (cmd === 'Q' || cmd === 'q') {
           while (i + 3 < n && !/^[MmLlHhVvCcSsQqTtAaZz]$/.test(tokens[i])) {
             const x1 = parseFloat(tokens[i]);
             const y1 = parseFloat(tokens[i + 1]);
             const x = parseFloat(tokens[i + 2]);
             const y = parseFloat(tokens[i + 3]);
             i += 4;
-            const op = cmd.toUpperCase();
-            if (cmd === 's' || cmd === 'q') {
-              currentTokens.push(`${op} ${(curX + x1).toFixed(4)} ${(curY + y1).toFixed(4)} ${(curX + x).toFixed(4)} ${(curY + y).toFixed(4)}`);
+            if (isNaN(x1) || isNaN(y1) || isNaN(x) || isNaN(y)) break;
+            if (cmd === 'q') {
+              currentTokens.push(`Q ${(curX + x1).toFixed(4)} ${(curY + y1).toFixed(4)} ${(curX + x).toFixed(4)} ${(curY + y).toFixed(4)}`);
               curX += x;
               curY += y;
             } else {
-              currentTokens.push(`${op} ${x1.toFixed(4)} ${y1.toFixed(4)} ${x.toFixed(4)} ${y.toFixed(4)}`);
+              currentTokens.push(`Q ${x1.toFixed(4)} ${y1.toFixed(4)} ${x.toFixed(4)} ${y.toFixed(4)}`);
               curX = x;
               curY = y;
             }
           }
         } else if (cmd === 'A' || cmd === 'a') {
           while (i + 6 < n && !/^[MmLlHhVvCcSsQqTtAaZz]$/.test(tokens[i])) {
-            const rx = tokens[i];
-            const ry = tokens[i + 1];
+            const rx = parseFloat(tokens[i]);
+            const ry = parseFloat(tokens[i + 1]);
             const rot = tokens[i + 2];
             const la = tokens[i + 3];
             const sw = tokens[i + 4];
             const x = parseFloat(tokens[i + 5]);
             const y = parseFloat(tokens[i + 6]);
             i += 7;
+            if (isNaN(rx) || isNaN(ry) || isNaN(x) || isNaN(y)) break;
             if (cmd === 'a') {
               curX += x;
               curY += y;
@@ -323,7 +364,7 @@ export class SVGViewer {
   }
 
   decomposeCompoundPaths(svg) {
-    const paths = Array.from(svg.querySelectorAll('path')).filter(p => !p.closest('defs'));
+    const paths = Array.from(svg.querySelectorAll('path')).filter(p => !p.closest('defs') && !p.closest('symbol'));
     paths.forEach(pathEl => {
       const d = pathEl.getAttribute('d');
       if (!d) return;
@@ -334,16 +375,24 @@ export class SVGViewer {
       if (!parent) return;
 
       const frag = document.createDocumentFragment();
-      const transform = pathEl.getAttribute('transform');
       subpaths.forEach(subD => {
         const newPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        for (let i = 0; i < pathEl.attributes.length; i++) {
+          const attr = pathEl.attributes[i];
+          if (attr.name !== 'd') {
+            newPath.setAttribute(attr.name, attr.value);
+          }
+        }
         newPath.setAttribute('d', subD);
-        if (transform) newPath.setAttribute('transform', transform);
         frag.appendChild(newPath);
       });
 
       parent.replaceChild(frag, pathEl);
     });
+  }
+
+  resolveUseElements(svg) {
+    resolveUseElements(svg);
   }
 
   setupPlot(container, item, options = {}) {
@@ -357,19 +406,32 @@ export class SVGViewer {
     this.isLoop = !!options.loop;
 
     const svg = container.querySelector('svg');
-    if (!svg) return false;
+    if (!svg) {
+      this.activeContainer = null;
+      this.activeCard = null;
+      this.activeItem = null;
+      return false;
+    }
 
     this.activeSvg = svg;
     this.originalSvgHTML = item.content || svg.outerHTML;
+
+    // Resolve any <use> instances into inline graphic elements
+    this.resolveUseElements(svg);
 
     // Decompose compound multi-subpath paths into individual <path> elements
     // so a simulation plotter pen draws each subpath sequentially instead of all at the same time
     this.decomposeCompoundPaths(svg);
 
     this.animElements = Array.from(svg.querySelectorAll('path, polygon, polyline, circle, rect, ellipse, line'))
-      .filter(el => !el.closest('defs'));
+      .filter(el => !el.closest('defs') && !el.closest('symbol'));
 
-    if (this.animElements.length === 0) return false;
+    if (this.animElements.length === 0) {
+      this.activeContainer = null;
+      this.activeCard = null;
+      this.activeItem = null;
+      return false;
+    }
 
     this.scale = this.computeScale(svg);
     const pinWidth = this.getPinStrokeWidth(svg);
@@ -568,6 +630,10 @@ export class SVGViewer {
 
   play() {
     if (!this.activeContainer) return;
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
 
     this.isPlotting = true;
     if (this.activeCard) {

@@ -105,6 +105,7 @@
   align-items: center;
   justify-content: center;
   padding: 16px;
+  color: var(--text-primary);
 }
 
 .svg-card-preview > svg:first-child {
@@ -170,6 +171,14 @@
   border-top: 1px solid var(--border-color);
 }
 
+.card-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
 .svg-card-name {
   font-size: 14px;
   font-weight: 700;
@@ -178,6 +187,23 @@
   overflow: hidden;
   text-overflow: ellipsis;
   letter-spacing: -0.01em;
+  flex: 1;
+  min-width: 0;
+}
+
+.sprite-badge {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--accent-color);
+  border: 1px solid rgba(99, 102, 241, 0.22);
+  flex-shrink: 0;
+  line-height: 1.4;
+  user-select: none;
 }
 
 .svg-card.menu-open {
@@ -544,6 +570,7 @@
   overflow: hidden;
   box-sizing: border-box;
   cursor: pointer;
+  color: var(--text-primary);
 }
 
 .fullscreen-svg-container svg {

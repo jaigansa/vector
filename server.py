@@ -14,6 +14,7 @@ import os
 import re
 import socketserver
 import sys
+import xml.etree.ElementTree as ET
 from urllib.parse import urlparse
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -36,6 +37,160 @@ def slug_to_category(slug):
     return slug.replace("-", " ").title().replace("Cad", "CAD").replace("Scifi", "Sci-Fi").replace("Tech", "Tech")
 
 
+def is_svg_sprite(content, root=None):
+    """Detect if an SVG string or ElementTree root is a sprite container."""
+    if "<symbol" not in content.lower():
+        return False
+    if root is None:
+        try:
+            root = ET.fromstring(content)
+        except Exception:
+            return "<symbol" in content.lower()
+
+    symbols = [e for e in root.iter() if e.tag.endswith("symbol")]
+    if not symbols:
+        return False
+
+    w = root.attrib.get("width", "").strip()
+    h = root.attrib.get("height", "").strip()
+    style = root.attrib.get("style", "").lower()
+    if w in ("0", "0px") or h in ("0", "0px") or "position:absolute" in style or "display:none" in style:
+        return True
+
+    renderable_tags = {"path", "circle", "rect", "polygon", "polyline", "line", "ellipse", "text", "image", "use"}
+    has_direct_shapes = False
+    for child in root:
+        tag_name = child.tag.split("}")[-1].lower()
+        if tag_name in renderable_tags or (tag_name == "g" and any(e.tag.split("}")[-1].lower() in renderable_tags for e in child.iter())):
+            has_direct_shapes = True
+            break
+
+    return not has_direct_shapes or len(symbols) >= 2
+
+
+def extract_sprite_symbols_regex(content, fname, rel_path, cat_name, cat_slug, stat):
+    """Fallback regex extractor for symbols when XML parser encounters syntax anomalies."""
+    items = []
+    base_file_id = os.path.splitext(fname)[0]
+    pattern = re.compile(r'<symbol\s+([^>]*id=["\']([^"\']+)["\'][^>]*)>(.*?)</symbol>', re.DOTALL | re.IGNORECASE)
+    matches = pattern.findall(content)
+
+    for idx, (raw_attrs, sym_id, inner) in enumerate(matches):
+        item_id = f"{base_file_id}-{sym_id}" if not sym_id.startswith(base_file_id) else sym_id
+        vb_match = re.search(r'viewBox=["\']([^"\']+)["\']', raw_attrs, re.IGNORECASE)
+        vb = vb_match.group(1) if vb_match else "0 0 24 24"
+        title_match = re.search(r'<title[^>]*>(.*?)</title>', inner, re.DOTALL | re.IGNORECASE)
+        disp_name = title_match.group(1).strip() if title_match else sym_id.replace("-", " ").replace("_", " ").title()
+
+        clean_attrs = re.sub(r'\b(id|viewBox)\s*=\s*["\'][^"\']*["\']', '', raw_attrs, flags=re.IGNORECASE).strip()
+        attrs_str = f" {clean_attrs}" if clean_attrs else ""
+        svg_str = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{vb}"{attrs_str}>\n  {inner.strip()}\n</svg>'
+
+        items.append({
+            "name": f"{sym_id}.svg",
+            "path": f"{rel_path}#{sym_id}",
+            "category": cat_name,
+            "categorySlug": cat_slug,
+            "id": item_id,
+            "displayName": disp_name,
+            "symbolId": sym_id,
+            "isSprite": True,
+            "spriteFile": fname,
+            "size": len(svg_str.encode("utf-8")),
+            "mtime": int(stat.st_mtime * 1000),
+            "content": svg_str,
+            "rawSpriteContent": content
+        })
+    return items
+
+
+def extract_sprite_symbols(content, fname, rel_path, cat_name, cat_slug, stat):
+    """Extract individual <symbol> elements from an SVG sprite into standalone, renderable SVGs."""
+    ET.register_namespace("", "http://www.w3.org/2000/svg")
+    ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
+
+    items = []
+    base_file_id = os.path.splitext(fname)[0]
+
+    try:
+        root = ET.fromstring(content)
+    except Exception:
+        return extract_sprite_symbols_regex(content, fname, rel_path, cat_name, cat_slug, stat)
+
+    symbols = [elem for elem in root.iter() if elem.tag.endswith("symbol")]
+    if not symbols:
+        return []
+
+    shared_defs = [elem for elem in root if elem.tag.endswith("defs")]
+    shared_style = [elem for elem in root if elem.tag.endswith("style")]
+    root_vb = root.get("viewBox")
+
+    for idx, s in enumerate(symbols):
+        sym_id = s.get("id") or f"symbol-{idx+1}"
+        item_id = f"{base_file_id}-{sym_id}" if not sym_id.startswith(base_file_id) else sym_id
+
+        title = None
+        for child in list(s):
+            if child.tag.endswith("title") and child.text:
+                title = child.text.strip()
+                break
+
+        disp_name = title or sym_id.replace("-", " ").replace("_", " ").title()
+
+        new_svg = ET.Element("{http://www.w3.org/2000/svg}svg")
+        for k, v in s.attrib.items():
+            if k == "id":
+                continue
+            new_svg.set(k, v)
+
+        if "viewBox" not in new_svg.attrib:
+            if root_vb:
+                new_svg.set("viewBox", root_vb)
+            elif s.get("width") and s.get("height"):
+                new_svg.set("viewBox", f"0 0 {s.get('width')} {s.get('height')}")
+            else:
+                new_svg.set("viewBox", "0 0 24 24")
+
+        for st in shared_style:
+            new_svg.append(st)
+
+        for d in shared_defs:
+            try:
+                d_clone = ET.fromstring(ET.tostring(d))
+                parent_map = {c: p for p in d_clone.iter() for c in p}
+                for sym_in_d in [e for e in d_clone.iter() if e.tag.endswith("symbol")]:
+                    p = parent_map.get(sym_in_d)
+                    if p is not None:
+                        p.remove(sym_in_d)
+                if len(d_clone) > 0:
+                    new_svg.append(d_clone)
+            except Exception:
+                pass
+
+        for child in list(s):
+            new_svg.append(child)
+
+        svg_str = ET.tostring(new_svg, encoding="unicode")
+
+        items.append({
+            "name": f"{sym_id}.svg",
+            "path": f"{rel_path}#{sym_id}",
+            "category": cat_name,
+            "categorySlug": cat_slug,
+            "id": item_id,
+            "displayName": disp_name,
+            "symbolId": sym_id,
+            "isSprite": True,
+            "spriteFile": fname,
+            "size": len(svg_str.encode("utf-8")),
+            "mtime": int(stat.st_mtime * 1000),
+            "content": svg_str,
+            "rawSpriteContent": content
+        })
+
+    return items
+
+
 def build(save_json=True):
     svg_files = []
     os.makedirs(SVG_DIR, exist_ok=True)
@@ -54,28 +209,59 @@ def build(save_json=True):
                             content = f.read()
 
                         rel_path = os.path.relpath(fpath, BASE_DIR).replace("\\", "/")
-                        svg_files.append({
-                            "name": fname,
-                            "path": rel_path,
-                            "category": cat_name,
-                            "categorySlug": cat_slug,
-                            "id": os.path.splitext(fname)[0],
-                            "size": stat.st_size,
-                            "mtime": int(stat.st_mtime * 1000),
-                            "content": content
-                        })
+                        if is_svg_sprite(content):
+                            extracted = extract_sprite_symbols(content, fname, rel_path, cat_name, cat_slug, stat)
+                            if extracted:
+                                svg_files.extend(extracted)
+                            else:
+                                title_match = re.search(r'<title[^>]*>(.*?)</title>', content, re.DOTALL | re.IGNORECASE)
+                                disp_name = title_match.group(1).strip() if title_match else os.path.splitext(fname)[0].replace("-", " ").replace("_", " ").title()
+                                svg_files.append({
+                                    "name": fname,
+                                    "path": rel_path,
+                                    "category": cat_name,
+                                    "categorySlug": cat_slug,
+                                    "id": os.path.splitext(fname)[0],
+                                    "displayName": disp_name,
+                                    "size": stat.st_size,
+                                    "mtime": int(stat.st_mtime * 1000),
+                                    "content": content
+                                })
+                        else:
+                            title_match = re.search(r'<title[^>]*>(.*?)</title>', content, re.DOTALL | re.IGNORECASE)
+                            disp_name = title_match.group(1).strip() if title_match else os.path.splitext(fname)[0].replace("-", " ").replace("_", " ").title()
+                            svg_files.append({
+                                "name": fname,
+                                "path": rel_path,
+                                "category": cat_name,
+                                "categorySlug": cat_slug,
+                                "id": os.path.splitext(fname)[0],
+                                "displayName": disp_name,
+                                "size": stat.st_size,
+                                "mtime": int(stat.st_mtime * 1000),
+                                "content": content
+                            })
                     except Exception as e:
                         print(f"Error reading {fname}: {e}", file=sys.stderr)
 
     svg_files.sort(key=lambda x: x["name"])
 
-    categories = []
+    categories_dict = {}
+    for item in svg_files:
+        c_slug = item.get("categorySlug") or "general"
+        c_name = item.get("category") or slug_to_category(c_slug)
+        if c_slug not in categories_dict:
+            categories_dict[c_slug] = {"slug": c_slug, "name": c_name}
+
     for entry in sorted(os.scandir(SVG_DIR), key=lambda e: e.name):
         if entry.is_dir() and not entry.name.startswith("."):
-            categories.append({
-                "slug": entry.name,
-                "name": slug_to_category(entry.name)
-            })
+            if entry.name not in categories_dict:
+                categories_dict[entry.name] = {
+                    "slug": entry.name,
+                    "name": slug_to_category(entry.name)
+                }
+
+    categories = sorted(categories_dict.values(), key=lambda x: x["name"])
 
     catalog = {
         "status": "ok",
@@ -228,7 +414,7 @@ def run():
 
 
 if __name__ == "__main__":
-    if "--build" in sys.argv:
+    if "--build" in sys.argv or "build" in sys.argv:
         build(save_json=True)
     else:
         run()

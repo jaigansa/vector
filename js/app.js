@@ -96,6 +96,8 @@ class App {
       'Nature & Scenery': '<polygon points="2 20 8 10 14 17 19 8 22 20 2 20"/>',
       'Abstract & 3D': '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>',
       'Art & Creative': '<path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.563-2.512 5.563-5.563C22 6.5 17.5 2 12 2z"/>',
+      'Sprite Test': '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
+      'Sprites': '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
       'default': '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>'
     };
     return iconSvgs[cat] || iconSvgs['default'];
@@ -288,6 +290,10 @@ class App {
   }
 
   filterAndRender() {
+    if (this.viewer?.activeCard) {
+      this.viewer.stopPlotterAnimation();
+    }
+
     let items = [...this.library.items];
 
     // Filter by Category
@@ -298,10 +304,12 @@ class App {
     // Filter by Search
     if (this.searchQuery) {
       items = items.filter(item => {
-        const titleMatch = item.displayName.toLowerCase().includes(this.searchQuery);
-        const catMatch = item.category.toLowerCase().includes(this.searchQuery);
-        const nameMatch = item.name.toLowerCase().includes(this.searchQuery);
-        return titleMatch || catMatch || nameMatch;
+        const titleMatch = (item.displayName || '').toLowerCase().includes(this.searchQuery);
+        const catMatch = (item.category || '').toLowerCase().includes(this.searchQuery);
+        const nameMatch = (item.name || '').toLowerCase().includes(this.searchQuery);
+        const spriteMatch = !!(item.spriteFile && item.spriteFile.toLowerCase().includes(this.searchQuery));
+        const symbolMatch = !!(item.symbolId && item.symbolId.toLowerCase().includes(this.searchQuery));
+        return titleMatch || catMatch || nameMatch || spriteMatch || symbolMatch;
       });
     }
 
@@ -340,7 +348,10 @@ class App {
             </button>
           </div>
           <div class="svg-card-info">
-            <span class="svg-card-name" title="${item.displayName}">${item.displayName}</span>
+            <div class="card-name-row">
+              <span class="svg-card-name" title="${item.displayName}">${item.displayName}</span>
+              ${item.isSprite ? `<span class="sprite-badge" title="Symbol from ${item.spriteFile || 'sprite'}">Sprite</span>` : ''}
+            </div>
             <div class="card-bottom-actions">
               <button class="btn-card-action btn-plot-play" data-action="toggle-play" data-id="${item.id}" title="Play / Pause Draw Animation" aria-label="Play animation">
                 <svg class="icon-play" viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
@@ -385,6 +396,14 @@ class App {
                     </svg>
                     <span>Download PNG</span>
                   </button>
+                  ${item.isSprite ? `
+                  <button class="card-dropdown-item" data-action="download-sprite" data-id="${item.id}" role="menuitem">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
+                    </svg>
+                    <span>Download Full Sprite</span>
+                  </button>
+                  ` : ''}
                 </div>
               </div>
             </div>
@@ -466,6 +485,10 @@ class App {
           } else if (action === 'download-png') {
             this.closeAllCardMenus();
             SVGExporter.exportPNG(item, 2.5);
+            this.triggerHaptic();
+          } else if (action === 'download-sprite') {
+            this.closeAllCardMenus();
+            SVGExporter.downloadSprite(item);
             this.triggerHaptic();
           }
           return;
