@@ -1,0 +1,22 @@
+{
+  "name": "vector",
+  "version": "1.0.0",
+  "description": "A lightweight, zero-dependency SVG artwork gallery, CNC plotter simulator, and vector exporter. Built for desktop, tablet, and mobile.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaigansa/vector.git"
+  },
+  "keywords": [],
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/jaigansa/vector/issues"
+  },
+  "homepage": "https://github.com/jaigansa/vector#readme",
+  "dependencies": {
+    "lucide": "^1.77.0"
+  }
+}

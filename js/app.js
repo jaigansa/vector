@@ -13,6 +13,8 @@ class App {
     this.activeCategory = 'All Artworks';
     this.searchQuery = '';
     this.filteredItems = [];
+    this.currentPage = 1;
+    this.itemsPerPage = 40;
 
     this.init();
   }
@@ -41,6 +43,28 @@ class App {
       }
     });
 
+    // Info / Details Modal
+    this.infoModal = document.getElementById('info-modal');
+    this.infoModalContent = document.getElementById('info-modal-content');
+    this.infoModalCloseBtn = document.getElementById('info-modal-close');
+
+    this.infoModalCloseBtn?.addEventListener('click', () => {
+      this.closeInfoModal();
+    });
+
+    this.infoModal?.addEventListener('click', (e) => {
+      if (e.target === this.infoModal) {
+        this.closeInfoModal();
+      }
+    });
+
+    // Escape key exits info modal
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.infoModal && this.infoModal.style.display === 'flex') {
+        this.closeInfoModal();
+      }
+    });
+
     // 3-Grid Gallery Mode Toggle (1:1 preview only)
     this.gridModeBtn = document.getElementById('grid-mode-btn');
     this.isGalleryMode = localStorage.getItem('vector_gallery_mode') === 'true';
@@ -56,6 +80,7 @@ class App {
 
     this.bindEvents();
     this.cleanupServiceWorker();
+    window.lucide.createIcons();
 
     // Load SVG items & render dynamic category dropdown in searchbar
     await this.library.load();
@@ -88,19 +113,18 @@ class App {
   }
 
   getCategoryIcon(cat) {
-    const iconSvgs = {
-      'All Artworks': '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
-      'Tech & Software': '<path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/>',
-      'Business & Marketing': '<path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/>',
-      'Engineering & CAD': '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
-      'Nature & Scenery': '<polygon points="2 20 8 10 14 17 19 8 22 20 2 20"/>',
-      'Abstract & 3D': '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>',
-      'Art & Creative': '<path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.563-2.512 5.563-5.563C22 6.5 17.5 2 12 2z"/>',
-      'Sprite Test': '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
-      'Sprites': '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
-      'default': '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>'
+    const iconNames = {
+      'All Artworks': 'grid-3x3',
+      'Tech & Software': 'code',
+      'Business & Marketing': 'briefcase',
+      'Engineering & CAD': 'layers',
+      'Nature & Scenery': 'mountain',
+      'Abstract & 3D': 'package',
+      'Art & Creative': 'palette',
+      'Sprite Test': 'grid-2x2',
+      'Sprites': 'grid-2x2',
     };
-    return iconSvgs[cat] || iconSvgs['default'];
+    return iconNames[cat] || 'search';
   }
 
   renderCategoryDropdown() {
@@ -124,15 +148,11 @@ class App {
     });
 
     menu.innerHTML = allCategories.map(cat => {
-      const iconPath = this.getCategoryIcon(cat);
       const isActive = this.activeCategory === cat;
       const count = counts[cat] ?? 0;
 
       return `
         <div class="category-dropdown-item ${isActive ? 'active' : ''}" data-filter="${cat}" role="option">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            ${iconPath}
-          </svg>
           <span class="dropdown-item-text">${cat}</span>
           <span class="dropdown-item-count">${count}</span>
         </div>
@@ -148,19 +168,12 @@ class App {
     });
 
     this.updateDropdownButton();
+    window.lucide.createIcons();
   }
 
   updateDropdownButton() {
     const labelEl = document.getElementById('category-current-label');
-    const iconEl = document.getElementById('category-btn-icon');
     if (labelEl) labelEl.textContent = this.activeCategory;
-    if (iconEl) {
-      iconEl.innerHTML = `
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          ${this.getCategoryIcon(this.activeCategory)}
-        </svg>
-      `;
-    }
   }
 
   selectCategory(category) {
@@ -272,6 +285,159 @@ class App {
     }
   }
 
+  parseLicenseMetadata(item) {
+    const content = item.content || '';
+    const doc = new DOMParser().parseFromString(content, 'image/svg+xml');
+    const root = doc.querySelector('svg');
+
+    // --- License extraction ---
+    let license = 'Public Domain';
+    let licenseTitle = 'Creative Commons (CC0)';
+    let licenseDesc = 'Free for personal and commercial use. No attribution required.';
+    let licenseBadge = 'Public Domain';
+    let badgeColor = '#b45309';
+
+    // Check <metadata> for Creative Commons / rights info
+    const metadataEl = doc.querySelector('metadata');
+    if (metadataEl) {
+      const metadataText = metadataEl.textContent || metadataEl.innerHTML || '';
+      const ccMatch = metadataText.match(/(creative\s+commons[^<]*)/i);
+      const cc0Match = metadataText.match(/cc0/i);
+      const pdMatch = metadataText.match(/public\s+domain/i);
+      if (cc0Match || pdMatch) {
+        licenseTitle = 'Creative Commons (CC0)';
+        license = 'Public Domain';
+        licenseDesc = 'Free for personal and commercial use. No attribution required.';
+        licenseBadge = 'Public Domain';
+        badgeColor = '#b45309';
+      } else if (ccMatch) {
+        licenseTitle = ccMatch[1].trim();
+        licenseBadge = 'Licensed';
+        badgeColor = '#2563eb';
+      }
+    }
+
+    // Check <license> element
+    const licenseEl = doc.querySelector('license');
+    if (licenseEl) {
+      const licText = licenseEl.textContent?.trim() || '';
+      if (licText) licenseTitle = licText;
+      licenseBadge = licenseEl.getAttribute('href') ? 'Licensed' : 'Public Domain';
+    }
+
+    // Check root svg attributes
+    const svgLicense = root?.getAttribute('license');
+    if (svgLicense) licenseTitle = svgLicense;
+
+    // Check <title> / <desc> for hints
+    const titleEl = doc.querySelector('title');
+    const descEl = doc.querySelector('desc');
+    const titleText = titleEl?.textContent?.trim() || '';
+    const descText = descEl?.textContent?.trim() || '';
+
+    // --- Specifications ---
+    const sizeKB = (item.sizeBytes / 1024).toFixed(2);
+    const sizeMB = (sizeKB / 1024).toFixed(2);
+    const sizeDisplay = parseFloat(sizeMB) >= 1 ? `${sizeMB} MB` : `${sizeKB} KB`;
+
+    const spriteText = item.isSprite ? 'Yes (symbol: ' + (item.symbolId || '-') + ')' : 'No';
+
+    const specs = [
+      { label: 'Title', value: item.displayName || 'Untitled', gold: false },
+      { label: 'Category', value: item.category || 'General', gold: false },
+      { label: 'SVG ID', value: item.id || '-', gold: false },
+      { label: 'ViewBox', value: item.viewBox || '-', gold: false },
+      { label: 'Width', value: item.width ? `${item.width} px` : '-', gold: false },
+      { label: 'Height', value: item.height ? `${item.height} px` : '-', gold: false },
+      { label: 'Size', value: sizeDisplay, gold: false },
+      { label: 'Sprite', value: spriteText, gold: false },
+    ];
+
+    return {
+      license,
+      licenseTitle,
+      licenseDesc,
+      licenseBadge,
+      badgeColor,
+      specs,
+      titleText,
+      descText,
+    };
+  }
+
+  openInfoModal(item) {
+    if (!this.infoModal || !this.infoModalContent) return;
+
+    const { licenseTitle, licenseDesc, licenseBadge, badgeColor, specs, descText } = this.parseLicenseMetadata(item);
+
+    const escHtml = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    const licenseCard = `
+      <div class="info-card">
+        <p class="info-kicker">LICENSE</p>
+        <div class="info-license-row">
+          <div class="info-license-badge">
+            <svg viewBox="0 0 24 24" width="22" height="22" data-lucide="creative-commons" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M10 9.3a2.8 2.8 0 0 0-3.5 1 3.1 3.1 0 0 0 0 3.4 2.7 2.7 0 0 0 3.5 1"/>
+              <path d="M17 9.3a2.8 2.8 0 0 0-3.5 1 3.1 3.1 0 0 0 0 3.4 2.7 2.7 0 0 0 3.5 1"/>
+            </svg>
+          </div>
+          <div class="info-license-text">
+            <h3 class="info-license-title">${escHtml(licenseTitle)}</h3>
+            <p class="info-license-desc">${escHtml(licenseDesc)}</p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const specRows = specs
+      .map((s) => `
+        <li class="info-spec-item">
+          <span class="info-spec-label">${escHtml(s.label)}</span>
+          <span class="info-spec-value${s.gold ? ' gold' : ''}">${escHtml(s.value)}</span>
+        </li>
+      `)
+      .join('');
+
+    let descriptionHtml = '';
+    if (descText) {
+      const escapedDesc = escHtml(descText);
+      descriptionHtml = `
+        <div class="info-desc-box">
+          <span class="info-desc-label">Description</span>
+          <p class="info-desc-content">${escapedDesc}</p>
+        </div>`;
+    }
+
+    const specCard = `
+      <div class="info-card">
+        <p class="info-kicker">SPECIFICATIONS</p>
+        <ul class="info-spec-list">${specRows}</ul>
+        ${descriptionHtml}
+      </div>
+    `;
+
+    this.infoModalContent.innerHTML = `
+      <div class="info-card-group">
+        ${licenseCard}
+        ${specCard}
+      </div>
+    `;
+
+    this.infoModal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    window.lucide.createIcons();
+  }
+
+  closeInfoModal() {
+    if (!this.infoModal) return;
+    this.infoModal.style.display = 'none';
+    document.body.style.overflow = '';
+    if (this.infoModalContent) this.infoModalContent.innerHTML = '';
+  }
+
   toggleGalleryMode() {
     this.triggerHaptic();
     this.isGalleryMode = !this.isGalleryMode;
@@ -314,7 +480,9 @@ class App {
     }
 
     this.filteredItems = items;
+    this.currentPage = 1;
     this.renderGrid();
+    this.renderPagination();
   }
 
   renderGrid() {
@@ -329,22 +497,28 @@ class App {
           emptyMsg.textContent = 'No vector artworks found matching your search.';
         }
       }
+      const paginationEl = document.getElementById('pagination');
+      if (paginationEl) paginationEl.style.display = 'none';
       return;
     }
 
     this.emptyState.style.display = 'none';
-    this.grid.innerHTML = this.filteredItems.map(item => {
+
+    // Paginate items
+    const start = (this.currentPage - 1) * this.itemsPerPage;
+    const end = start + this.itemsPerPage;
+    const pageItems = this.filteredItems.slice(start, end);
+
+    this.grid.innerHTML = pageItems.map(item => {
       return `
         <div class="svg-card" data-id="${item.id}">
           <div class="svg-card-preview">
             ${item.content}
+            <button class="btn-card-info" data-action="view-info" data-id="${item.id}" title="View details" aria-label="View artwork details">
+              <svg viewBox="0 0 24 24" width="16" height="16" data-lucide="info" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+            </button>
             <button class="btn-preview-fullscreen" data-action="preview-fullscreen" data-id="${item.id}" title="View fullscreen" aria-label="Open fullscreen preview">
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="15 3 21 3 21 9"></polyline>
-                <polyline points="9 21 3 21 3 15"></polyline>
-                <line x1="21" y1="3" x2="14" y2="10"></line>
-                <line x1="3" y1="21" x2="10" y2="14"></line>
-              </svg>
+              <svg viewBox="0 0 24 24" width="13" height="13" data-lucide="maximize-2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></svg>
             </button>
           </div>
           <div class="svg-card-info">
@@ -354,13 +528,8 @@ class App {
             </div>
             <div class="card-bottom-actions">
               <button class="btn-card-action btn-plot-play" data-action="toggle-play" data-id="${item.id}" title="Play / Pause Draw Animation" aria-label="Play animation">
-                <svg class="icon-play" viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
-                  <polygon points="6 4 19 12 6 20 6 4"></polygon>
-                </svg>
-                <svg class="icon-pause" viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
-                  <rect x="6" y="5" width="4" height="14" rx="1"></rect>
-                  <rect x="14" y="5" width="4" height="14" rx="1"></rect>
-                </svg>
+                <svg class="icon-play" viewBox="0 0 24 24" width="13" height="13" data-lucide="play" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+                <svg class="icon-pause" viewBox="0 0 24 24" width="13" height="13" data-lucide="pause" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
               </button>
               <button class="btn-card-action btn-plot-speed" data-action="toggle-speed" data-id="${item.id}" title="Plotter speed: ${this.viewer.getSpeedLabel()} (Click to cycle 1x / 2x / 4x / 0.5x)" aria-label="Change plot speed">
                 <span class="speed-label">${this.viewer.getSpeedLabel()}</span>
@@ -371,36 +540,24 @@ class App {
               </div>
               <div class="card-menu-wrapper">
                 <button class="btn-card-action btn-menu-trigger" data-action="toggle-menu" data-id="${item.id}" title="Export and more options" aria-label="More options" aria-haspopup="true" aria-expanded="false">
-                  <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
-                    <circle cx="12" cy="5" r="2.2"/>
-                    <circle cx="12" cy="12" r="2.2"/>
-                    <circle cx="12" cy="19" r="2.2"/>
-                  </svg>
+                  <svg viewBox="0 0 24 24" width="15" height="15" data-lucide="ellipsis-vertical" fill="currentColor"></svg>
                 </button>
                 <div class="card-actions-dropdown" role="menu">
                   <button class="card-dropdown-item" data-action="download-svg" data-id="${item.id}" role="menuitem">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24" width="14" height="14" data-lucide="download" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
                     <span>Download SVG</span>
                   </button>
                   <button class="card-dropdown-item" data-action="download-dxf" data-id="${item.id}" role="menuitem">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24" width="14" height="14" data-lucide="code" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
                     <span>Download DXF</span>
                   </button>
                   <button class="card-dropdown-item" data-action="download-png" data-id="${item.id}" role="menuitem">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24" width="14" height="14" data-lucide="image" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
                     <span>Download PNG</span>
                   </button>
                   ${item.isSprite ? `
                   <button class="card-dropdown-item" data-action="download-sprite" data-id="${item.id}" role="menuitem">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24" width="14" height="14" data-lucide="layers" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
                     <span>Download Full Sprite</span>
                   </button>
                   ` : ''}
@@ -411,6 +568,8 @@ class App {
         </div>
       `;
     }).join('');
+
+    window.lucide.createIcons();
 
     // Attach card click & slider handlers
     this.grid.querySelectorAll('.svg-card').forEach(card => {
@@ -445,6 +604,11 @@ class App {
           if (action === 'preview-fullscreen') {
             this.triggerHaptic();
             this.openFullscreen(item);
+            return;
+          } else if (action === 'view-info') {
+            e.stopPropagation();
+            this.triggerHaptic();
+            this.openInfoModal(item);
             return;
           } else if (action === 'toggle-play') {
             this.closeAllCardMenus();
@@ -505,6 +669,66 @@ class App {
         this.closeAllCardMenus();
         this.triggerHaptic();
         this.viewer.toggleCardPlot(card, item);
+      });
+    });
+  }
+
+  renderPagination() {
+    const pagination = document.getElementById('pagination');
+    const infoEl = document.getElementById('pagination-info');
+    const controlsEl = document.getElementById('pagination-controls');
+    const total = this.filteredItems.length;
+
+    if (!pagination || !infoEl || !controlsEl) return;
+
+    if (total <= this.itemsPerPage) {
+      pagination.style.display = 'none';
+      return;
+    }
+
+    pagination.style.display = 'flex';
+
+    const totalPages = Math.ceil(total / this.itemsPerPage);
+    const start = (this.currentPage - 1) * this.itemsPerPage + 1;
+    const end = Math.min(this.currentPage * this.itemsPerPage, total);
+
+    infoEl.textContent = `Showing ${start}-${end} of ${total} artworks`;
+
+    // Build page buttons: 1, 2, 3, ..., N, Next
+    let html = '';
+
+    // Always show first page
+    for (let i = 1; i <= totalPages; i++) {
+      const show = i === 1 || i === totalPages || (i >= this.currentPage - 1 && i <= this.currentPage + 1);
+      if (!show) {
+        if (html.trim().endsWith('...')) continue;
+        html += `<span class="pagination-ellipsis">…</span>`;
+        continue;
+      }
+      const active = i === this.currentPage ? ' active' : '';
+      html += `<button class="pagination-btn${active}" data-page="${i}" aria-label="Page ${i}">${i}</button>`;
+    }
+
+    // Next button (disabled on last page)
+    const nextDisabled = this.currentPage >= totalPages ? ' disabled' : '';
+    html += `<button class="pagination-btn pagination-next${nextDisabled}" data-page="next" aria-label="Next page">Next »</button>`;
+
+    controlsEl.innerHTML = html;
+
+    // Attach handlers
+    controlsEl.querySelectorAll('.pagination-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (btn.classList.contains('disabled') || btn.classList.contains('active')) return;
+        const page = btn.dataset.page;
+        if (page === 'next') {
+          this.currentPage = Math.min(this.currentPage + 1, totalPages);
+        } else {
+          this.currentPage = parseInt(page, 10);
+        }
+        this.renderGrid();
+        this.renderPagination();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       });
     });
   }
