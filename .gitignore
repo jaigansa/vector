@@ -12,7 +12,6 @@ Thumbs.db
 
 # Dependencies
 node_modules/
-package-lock.json
 
 # Eleventy output
 _site/
