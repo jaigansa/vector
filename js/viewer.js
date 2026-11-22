@@ -115,7 +115,7 @@ window.SVGViewer = class {
   }
 
   getSpeedLabel() {
-    return `${this.animSpeed}x`;
+    return `${this.animSpeed * 10}x`;
   }
 
   getElementLength(el) {
