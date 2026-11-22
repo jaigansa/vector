@@ -95,7 +95,7 @@ if (fs.existsSync(SVG_DIR)) {
             ? symTitleMatch[1].trim()
             : symId.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
-          svgFiles.push({
+          const svgItem = {
             name: `${symId}.svg`,
             path: `svgs/${catSlug}/${fname}#${symId}`,
             category: catName,
@@ -108,7 +108,8 @@ if (fs.existsSync(SVG_DIR)) {
             content: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}">${inner}</svg>`,
             size: Buffer.byteLength(inner, "utf8"),
             mtime: stat.mtimeMs,
-          });
+          };
+          svgFiles.push(svgItem);
         }
       } else {
         svgFiles.push({
