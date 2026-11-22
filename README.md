@@ -8,25 +8,25 @@ Built with native Bash and Node.js with **zero external dependencies** — no he
 
 ## ⚡ Quick Start
 
+Everything is driven by a single script: **`./vector.sh`**
+
 ### Build for production
 
-Run the build script directly:
-
 ```bash
-./build.sh
+./vector.sh
 ```
 
-*(or via npm if preferred: `npm run build`)*
+*(or via npm: `npm run build`)*
 
 Output is written directly to `docs/` — ready for GitHub Pages or any static host.
 
 ### Development & Live Server
 
 ```bash
-./build.sh --serve
+./vector.sh serve
 ```
 
-*(or `npm start`)*
+*(or `./vector.sh serve 3000` / `npm start`)*
 
 Open **[http://localhost:8080](http://localhost:8080)** in your browser.
 
@@ -35,38 +35,40 @@ Open **[http://localhost:8080](http://localhost:8080)** in your browser.
 Automatically rebuild whenever any file in `src/` changes:
 
 ```bash
-./build.sh --watch
+./vector.sh watch
 ```
+
+*(or `npm run watch`)*
 
 ---
 
 ## 📥 Adding or Removing SVGs
 
-### Option 1: Automated Script (Recommended)
+### Add SVG, rebuild, commit & deploy (All-in-One)
 
-Use the helper script to copy the SVG, regenerate category chunks, build the site, commit, and push:
+Use the built-in `add` command to copy the SVG, regenerate category chunks, rebuild the site, commit, and push to GitHub Pages in one step:
 
 ```bash
-./scripts/add-svg.sh path/to/file.svg [category-folder]
+./vector.sh add path/to/file.svg [category-folder]
 ```
 
 Examples:
 ```bash
-./scripts/add-svg.sh ~/Downloads/heart.svg icons
-./scripts/add-svg.sh ~/Downloads/illustration.svg
+./vector.sh add ~/Downloads/heart.svg icons
+./vector.sh add ~/Downloads/illustration.svg
 ```
 
-### Option 2: Manual
+### Manual Adding/Removing
 
 Drop `.svg` files into category folders inside `src/svgs/` (e.g. `src/svgs/freesvg/` or `src/svgs/sample/`), then rebuild:
 
 ```bash
-./build.sh
+./vector.sh
 ```
 
-To remove an SVG, delete it from `src/svgs/` and rebuild.
+To remove an SVG, delete it from `src/svgs/` and run `./vector.sh`.
 
-The build script automatically:
+The script automatically:
 - Scans `src/svgs/` for `.svg` files
 - Groups them by folder (each folder = a category)
 - Extracts `<title>` for display names
@@ -82,7 +84,7 @@ No server needed — the site works with `file://` directly too.
 
 ```
 vector/
-├── build.sh                 # Zero-dependency build script (build, --serve, --watch)
+├── vector.sh                # Single unified CLI (build, serve, watch, add, help)
 ├── src/
 │   ├── svgs/                # Drop your .svg files here, organized by category folder
 │   │   ├── freesvg/
@@ -102,7 +104,6 @@ vector/
 │   │   └── lucide.min.js
 │   └── index.html           # Main HTML template
 ├── scripts/
-│   ├── add-svg.sh           # CLI helper to add SVG, rebuild, commit & deploy
 │   └── generate-chunks.js   # Splits artwork catalog into per-category chunks
 ├── docs/                    # Static site build output (served by GitHub Pages)
 │   ├── css/
@@ -128,7 +129,7 @@ vector/
 
 ## 🛠️ Tech Stack
 
-- **Build Engine**: Standalone Bash (`build.sh`) + vanilla Node.js (zero npm dependencies)
+- **CLI & Build Engine**: [vector.sh](file:///home/jaigansa/Projects/personal/vector/vector.sh) + vanilla Node.js (zero npm dependencies)
 - **Frontend**: Vanilla HTML5, CSS3, JavaScript (no frameworks or runtime dependencies)
 - **Icons**: [Lucide](https://lucide.dev/)
 - **Deploy**: GitHub Pages (`/docs`), or any static host

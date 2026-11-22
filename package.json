@@ -4,9 +4,10 @@
   "description": "A lightweight, zero-dependency SVG artwork gallery, CNC plotter simulator, and vector exporter. Built for desktop, tablet, and mobile.",
   "main": "index.js",
   "scripts": {
-    "build": "./build.sh",
-    "start": "./build.sh --serve",
-    "watch": "./build.sh --watch"
+    "build": "./vector.sh build",
+    "start": "./vector.sh serve",
+    "watch": "./vector.sh watch",
+    "add": "./vector.sh add"
   },
   "repository": {
     "type": "git",
