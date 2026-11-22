@@ -4,9 +4,9 @@
   "description": "A lightweight, zero-dependency SVG artwork gallery, CNC plotter simulator, and vector exporter. Built for desktop, tablet, and mobile.",
   "main": "index.js",
   "scripts": {
-    "build": "eleventy",
-    "start": "eleventy --serve",
-    "watch": "eleventy --watch"
+    "build": "node scripts/generate-chunks.js && eleventy",
+    "start": "node scripts/generate-chunks.js && eleventy --serve",
+    "watch": "node scripts/generate-chunks.js && eleventy --watch"
   },
   "repository": {
     "type": "git",
