@@ -63,7 +63,11 @@ class App {
 
     // 3-Grid Gallery Mode Toggle (1:1 preview only)
     this.gridModeBtn = document.getElementById('grid-mode-btn');
-    this.isGalleryMode = localStorage.getItem('vector_gallery_mode') === 'true';
+    try {
+      this.isGalleryMode = localStorage.getItem('vector_gallery_mode') === 'true';
+    } catch {
+      this.isGalleryMode = false;
+    }
     if (this.isGalleryMode) {
       this.grid?.classList.add('gallery-mode');
       this.gridModeBtn?.classList.add('active');
@@ -779,7 +783,11 @@ class App {
   }
 }
 
-// Start app
-window.addEventListener('DOMContentLoaded', () => {
+// Start app safely whether DOMContentLoaded has already fired or not
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', () => {
+    window.vectorApp = new App();
+  });
+} else {
   window.vectorApp = new App();
-});
+}

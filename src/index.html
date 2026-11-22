@@ -267,9 +267,7 @@
     <!-- Application Scripts (loaded in order — no ES modules, works with file://) -->
     <script src="js/vendor/lucide.min.js"></script>
     <script src="js/lib/svg-library-core.js"></script>
-    {% for cat in svgs.categories %}
-    <script src="js/lib/{{ cat.slug }}.js"></script>
-    {% endfor %}
+    <!-- CHUNK_SCRIPTS -->
     <script src="js/storage.js"></script>
     <script src="js/export.js"></script>
     <script src="js/viewer.js"></script>

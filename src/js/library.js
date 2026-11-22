@@ -110,14 +110,15 @@ window.SVGLibrary = class {
   }
 
   parseSVGMetadata(name, content, explicitCategory = null, relPath = null, extraProps = {}) {
-    const id = extraProps.id || name.replace(/\.svg$/i, '').toLowerCase();
-    const sizeBytes = extraProps.size || new Blob([content]).size;
+    const safeContent = (typeof content === 'string' ? content : '') || (typeof extraProps.content === 'string' ? extraProps.content : '');
+    const id = extraProps.id || (name ? name.replace(/\.svg$/i, '').toLowerCase() : 'svg-' + Math.random().toString(36).slice(2, 8));
+    const sizeBytes = extraProps.size || (safeContent ? new Blob([safeContent]).size : 0);
 
     // Extract viewBox or dimensions
     let viewBox = '0 0 800 600';
     let width = 800;
     let height = 600;
-    const vbMatch = content.match(/viewBox=["']([^"']+)["']/i);
+    const vbMatch = safeContent.match(/viewBox=["']([^"']+)["']/i);
     if (vbMatch) {
       viewBox = vbMatch[1];
       const parts = viewBox.trim().split(/[\s,]+/).map(Number);
@@ -126,20 +127,20 @@ window.SVGLibrary = class {
         height = parts[3];
       }
     } else {
-      const wMatch = content.match(/width=["']([^"']+)["']/i);
-      const hMatch = content.match(/height=["']([^"']+)["']/i);
+      const wMatch = safeContent.match(/width=["']([^"']+)["']/i);
+      const hMatch = safeContent.match(/height=["']([^"']+)["']/i);
       if (wMatch && !isNaN(parseFloat(wMatch[1]))) width = parseFloat(wMatch[1]);
       if (hMatch && !isNaN(parseFloat(hMatch[1]))) height = parseFloat(hMatch[1]);
     }
 
-    const defaultDisplayName = name.replace(/\.svg$/i, '').replace(/[-_]/g, ' ');
+    const defaultDisplayName = name ? name.replace(/\.svg$/i, '').replace(/[-_]/g, ' ') : id;
 
     return {
       id,
       name,
       path: relPath || `svgs/${name}`,
       displayName: extraProps.displayName || defaultDisplayName,
-      content: content.trim(),
+      content: safeContent.trim(),
       sizeBytes,
       viewBox,
       width,

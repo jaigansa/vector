@@ -4,21 +4,24 @@
   "description": "A lightweight, zero-dependency SVG artwork gallery, CNC plotter simulator, and vector exporter. Built for desktop, tablet, and mobile.",
   "main": "index.js",
   "scripts": {
-    "build": "node scripts/generate-chunks.js && eleventy",
-    "start": "node scripts/generate-chunks.js && eleventy --serve",
-    "watch": "node scripts/generate-chunks.js && eleventy --watch"
+    "build": "./build.sh",
+    "start": "./build.sh --serve",
+    "watch": "./build.sh --watch"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jaigansa/vector.git"
   },
-  "keywords": [],
+  "keywords": [
+    "svg",
+    "vector",
+    "plotter",
+    "dxf",
+    "artwork"
+  ],
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/jaigansa/vector/issues"
   },
-  "homepage": "https://github.com/jaigansa/vector#readme",
-  "devDependencies": {
-    "@11ty/eleventy": "^2.0.0"
-  }
+  "homepage": "https://github.com/jaigansa/vector#readme"
 }

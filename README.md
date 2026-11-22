@@ -2,50 +2,79 @@
 
 A lightweight, zero-dependency SVG artwork gallery, CNC plotter simulator, and vector exporter. Built for desktop, tablet, and mobile.
 
-Powered by [Eleventy (11ty)](https://www.11ty.dev/) as a static site generator.
+Built with native Bash and Node.js with **zero external dependencies** — no heavy build tools, no `node_modules/` required.
 
 ---
 
 ## ⚡ Quick Start
 
-### Development (with live reload)
+### Build for production
+
+Run the build script directly:
 
 ```bash
-npm install
-npm start
+./build.sh
 ```
+
+*(or via npm if preferred: `npm run build`)*
+
+Output is written directly to `docs/` — ready for GitHub Pages or any static host.
+
+### Development & Live Server
+
+```bash
+./build.sh --serve
+```
+
+*(or `npm start`)*
 
 Open **[http://localhost:8080](http://localhost:8080)** in your browser.
 
-### Build for production
+### Watch Mode
+
+Automatically rebuild whenever any file in `src/` changes:
 
 ```bash
-npm run build
+./build.sh --watch
 ```
-
-Output goes to `_site/` — deploy that folder to GitHub Pages, Netlify, Vercel, or any static host.
 
 ---
 
 ## 📥 Adding or Removing SVGs
 
-Just drop `.svg` files into category folders inside `src/svgs/` (e.g. `src/svgs/illustrations/` or `src/svgs/icons/`), then rebuild:
+### Option 1: Automated Script (Recommended)
+
+Use the helper script to copy the SVG, regenerate category chunks, build the site, commit, and push:
 
 ```bash
-npm run build
+./scripts/add-svg.sh path/to/file.svg [category-folder]
+```
+
+Examples:
+```bash
+./scripts/add-svg.sh ~/Downloads/heart.svg icons
+./scripts/add-svg.sh ~/Downloads/illustration.svg
+```
+
+### Option 2: Manual
+
+Drop `.svg` files into category folders inside `src/svgs/` (e.g. `src/svgs/freesvg/` or `src/svgs/sample/`), then rebuild:
+
+```bash
+./build.sh
 ```
 
 To remove an SVG, delete it from `src/svgs/` and rebuild.
 
-Eleventy automatically:
+The build script automatically:
 - Scans `src/svgs/` for `.svg` files
 - Groups them by folder (each folder = a category)
 - Extracts `<title>` for display names
-- Detects SVG sprites (`<symbol>` elements) and splits them into individual artworks
-- Regenerates `_site/js/svg-library.js` with all artworks embedded
-- Regenerates `_site/index.html`
+- Detects SVG sprites (`<symbol>` elements) and extracts them into individual artworks with original attributes, viewBox, and styles preserved
+- Generates modular per-category chunks in `docs/js/lib/<category>.js` and `src/js/lib/`
+- Regenerates `docs/index.html` with injected chunk scripts
 
-No server needed — the site works with `file://` too.
+No server needed — the site works with `file://` directly too.
 
 ---
 
@@ -53,10 +82,9 @@ No server needed — the site works with `file://` too.
 
 ```
 vector/
+├── build.sh                 # Zero-dependency build script (build, --serve, --watch)
 ├── src/
-│   ├── _data/
-│   │   └── svgs.js          # Reads svgs/ and builds the artwork catalog
-│   ├── svgs/                # Drop your .svg files here, organized by folder
+│   ├── svgs/                # Drop your .svg files here, organized by category folder
 │   │   ├── freesvg/
 │   │   ├── sample/
 │   │   └── sprite-test/
@@ -65,7 +93,6 @@ vector/
 │   │   ├── components.css
 │   │   └── viewer.css
 │   ├── js/
-│   │   ├── svg-library.njk  # Template → generates js/svg-library.js
 │   │   ├── app.js
 │   │   ├── library.js
 │   │   ├── viewer.js
@@ -73,10 +100,17 @@ vector/
 │   │   └── storage.js
 │   ├── js/vendor/
 │   │   └── lucide.min.js
-│   └── index.njk            # Main HTML template
-├── eleventy.config.js       # Eleventy configuration
-├── package.json
-└── _site/                   # Build output (gitignored)
+│   └── index.html           # Main HTML template
+├── scripts/
+│   ├── add-svg.sh           # CLI helper to add SVG, rebuild, commit & deploy
+│   └── generate-chunks.js   # Splits artwork catalog into per-category chunks
+├── docs/                    # Static site build output (served by GitHub Pages)
+│   ├── css/
+│   ├── js/
+│   │   ├── lib/             # Split category chunks (freesvg.js, sample.js, etc.)
+│   │   └── ...
+│   └── index.html
+└── package.json
 ```
 
 ---
@@ -94,7 +128,7 @@ vector/
 
 ## 🛠️ Tech Stack
 
-- **Static Generator**: [Eleventy (11ty)](https://www.11ty.dev/) (v3)
-- **Frontend**: Vanilla HTML5, CSS3, JavaScript (no npm build steps or external runtime dependencies)
+- **Build Engine**: Standalone Bash (`build.sh`) + vanilla Node.js (zero npm dependencies)
+- **Frontend**: Vanilla HTML5, CSS3, JavaScript (no frameworks or runtime dependencies)
 - **Icons**: [Lucide](https://lucide.dev/)
-- **Deploy**: Any static host (GitHub Pages, Netlify, Vercel, etc.)
+- **Deploy**: GitHub Pages (`/docs`), or any static host

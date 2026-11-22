@@ -48,12 +48,12 @@ mkdir -p "$DEST_DIR"
 cp "$SRC_FILE" "$DEST_PATH"
 echo "✓ Copied $FILENAME → src/svgs/$CATEGORY/"
 
-# --- 2. Build with Eleventy ---
-npm run build
+# --- 2. Build static site to docs/ ---
+"$REPO_ROOT/build.sh"
 echo "✓ Built site to docs/"
 
 # --- 3. Commit and push ---
-git add -f src/svgs/ docs/
+git add src/svgs/ docs/
 git commit -m "Add SVG: $FILENAME (category: $CATEGORY)"
 git push origin main
 
