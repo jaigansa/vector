@@ -1,1 +1,0 @@
-window.svgLibrary = { categories: [], svgs: [] };
