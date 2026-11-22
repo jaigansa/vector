@@ -82,6 +82,15 @@ class App {
     await this.library.load();
     this.renderCategoryDropdown();
     this.filterAndRender();
+
+    // Handle shared link: #id=<itemId>
+    const hashId = window.location.hash.replace('#id=', '');
+    if (hashId) {
+      const item = this.findItemById(decodeURIComponent(hashId));
+      if (item) {
+        this.openFullscreen(item);
+      }
+    }
   }
 
   getCategoryIcon(cat) {
@@ -255,6 +264,40 @@ class App {
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(() => {});
     }
+  }
+
+  findItemById(id) {
+    return this.library.items.find(i => i.id === id) || this.filteredItems.find(i => i.id === id);
+  }
+
+  shareItem(item) {
+    const url = `${window.location.origin}${window.location.pathname}#id=${encodeURIComponent(item.id)}`;
+    try {
+      navigator.clipboard.writeText(url).then(() => {
+        this.showShareToast();
+      });
+    } catch {
+      // Fallback for older browsers
+      const textarea = document.createElement('textarea');
+      textarea.value = url;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      this.showShareToast();
+    }
+    this.triggerHaptic();
+  }
+
+  showShareToast() {
+    const toast = document.getElementById('share-toast');
+    if (!toast) return;
+    toast.style.display = 'block';
+    setTimeout(() => {
+      toast.style.display = 'none';
+    }, 2000);
   }
 
   parseLicenseMetadata(item) {
@@ -492,6 +535,9 @@ class App {
             <button class="btn-preview-fullscreen" data-action="preview-fullscreen" data-id="${item.id}" title="View fullscreen" aria-label="Open fullscreen preview">
               <svg viewBox="0 0 24 24" width="13" height="13" data-lucide="maximize-2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></svg>
             </button>
+            <button class="btn-card-share" data-action="share" data-id="${item.id}" title="Share link" aria-label="Share artwork link">
+              <svg viewBox="0 0 24 24" width="16" height="16" data-lucide="share-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+            </button>
           </div>
           <div class="svg-card-info">
             <div class="card-name-row">
@@ -576,6 +622,10 @@ class App {
           if (action === 'preview-fullscreen') {
             this.triggerHaptic();
             this.openFullscreen(item);
+            return;
+          } else if (action === 'share') {
+            this.triggerHaptic();
+            this.shareItem(item);
             return;
           } else if (action === 'view-info') {
             e.stopPropagation();
