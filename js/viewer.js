@@ -22,7 +22,7 @@ window.SVGViewer = class {
     this.activeItem = null;
     this.activeSvg = null;
     this.originalSvgHTML = null;
-    this.speedOptions = [1.0, 2.0, 4.0, 0.5];
+    this.speedOptions = [0.1, 0.2, 0.3, 0.4, 0.5, 1];
     this.speedIndex = 0;
     this.animSpeed = 1.0;
     try {
@@ -115,8 +115,7 @@ window.SVGViewer = class {
   }
 
   getSpeedLabel() {
-    const s = this.animSpeed;
-    return s === 0.5 ? '0.5x' : `${s}x`;
+    return `${this.animSpeed}x`;
   }
 
   getElementLength(el) {

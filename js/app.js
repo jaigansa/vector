@@ -503,7 +503,7 @@ class App {
                 <svg class="icon-play" viewBox="0 0 24 24" width="13" height="13" data-lucide="play" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
                 <svg class="icon-pause" viewBox="0 0 24 24" width="13" height="13" data-lucide="pause" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
               </button>
-              <button class="btn-card-action btn-plot-speed" data-action="toggle-speed" data-id="${item.id}" title="Plotter speed: ${this.viewer.getSpeedLabel()} (Click to cycle 1x / 2x / 4x / 0.5x)" aria-label="Change plot speed">
+              <button class="btn-card-action btn-plot-speed" data-action="toggle-speed" data-id="${item.id}" title="Plotter speed: ${this.viewer.getSpeedLabel()} (Click to cycle 0.1x / 0.2x / 0.3x / 0.4x / 0.5x / 1x)" aria-label="Change plot speed">
                 <span class="speed-label">${this.viewer.getSpeedLabel()}</span>
               </button>
               <div class="plot-slider-wrapper">
@@ -594,7 +594,7 @@ class App {
               el.textContent = label;
             });
             this.grid.querySelectorAll('.btn-plot-speed').forEach(btn => {
-              btn.setAttribute('title', `Plotter speed: ${label} (Click to cycle 1x / 2x / 4x / 0.5x)`);
+              btn.setAttribute('title', `Plotter speed: ${label} (Click to cycle 0.1x / 0.2x / 0.3x / 0.4x / 0.5x / 1x)`);
             });
           } else if (action === 'toggle-menu') {
             this.triggerHaptic();
