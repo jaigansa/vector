@@ -2,7 +2,6 @@ module.exports = function (eleventyConfig) {
   // Passthrough static assets
   eleventyConfig.addPassthroughCopy("src/css");
   eleventyConfig.addPassthroughCopy("src/js/vendor");
-  eleventyConfig.addPassthroughCopy("src/svgs");
   eleventyConfig.addPassthroughCopy("src/js/*.js");
 
   // Watch the svgs folder so changes trigger a rebuild
