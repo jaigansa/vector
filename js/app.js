@@ -2,10 +2,6 @@
  * Main Application Controller for Vector SVG Artwork Gallery
  */
 
-import { SVGLibrary } from './library.js';
-import { SVGViewer } from './viewer.js';
-import { SVGExporter } from './export.js';
-
 class App {
   constructor() {
     this.library = new SVGLibrary();
@@ -86,30 +82,6 @@ class App {
     await this.library.load();
     this.renderCategoryDropdown();
     this.filterAndRender();
-
-    // Auto-sync only when a live local server API is active
-    if (this.library.hasApiServer) {
-      window.addEventListener('focus', () => {
-        this.syncCategoriesAndItems();
-      });
-
-      // Background auto-sync poll every 10 seconds
-      setInterval(() => {
-        this.syncCategoriesAndItems();
-      }, 10000);
-    }
-  }
-
-  async syncCategoriesAndItems() {
-    const prevCount = this.library.items.length;
-    const prevCats = JSON.stringify(this.library.discoveredCategories || []);
-    await this.library.load();
-    const newCats = JSON.stringify(this.library.discoveredCategories || []);
-
-    if (prevCount !== this.library.items.length || prevCats !== newCats) {
-      this.renderCategoryDropdown();
-      this.filterAndRender();
-    }
   }
 
   getCategoryIcon(cat) {
@@ -539,8 +511,8 @@ class App {
                 <span class="plot-slider-pct">0%</span>
               </div>
               <div class="card-menu-wrapper">
-                <button class="btn-card-action btn-menu-trigger" data-action="toggle-menu" data-id="${item.id}" title="Export and more options" aria-label="More options" aria-haspopup="true" aria-expanded="false">
-                  <svg viewBox="0 0 24 24" width="15" height="15" data-lucide="ellipsis-vertical" fill="currentColor"></svg>
+                <button class="btn-card-action btn-menu-trigger" data-action="toggle-menu" data-id="${item.id}" title="Download" aria-label="Download" aria-haspopup="true" aria-expanded="false">
+                  <svg viewBox="0 0 24 24" width="15" height="15" data-lucide="download" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
                 </button>
                 <div class="card-actions-dropdown" role="menu">
                   <button class="card-dropdown-item" data-action="download-svg" data-id="${item.id}" role="menuitem">

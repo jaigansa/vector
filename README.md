@@ -6,6 +6,10 @@ A lightweight, zero-dependency SVG artwork gallery, CNC plotter simulator, and v
 
 ## ⚡ Quick Start
 
+Open **`index.html`** directly in your browser — no server needed.
+
+Or run the dev server for live rebuilds when adding SVGs:
+
 ```bash
 python3 server.py
 ```
@@ -27,15 +31,18 @@ Open **[http://localhost:8080](http://localhost:8080)** in your browser (or `htt
 
 ## 📥 Adding Artworks
 
-Just drop `.svg` files into category folders inside `svgs/` (e.g. `svgs/illustrations/` or `svgs/icons/`) and push!
+Just drop `.svg` files into category folders inside `svgs/` (e.g. `svgs/illustrations/` or `svgs/icons/`), then rebuild the library bundle:
 
-- **GitHub Pages (Automated)**: Pushing to `main` automatically triggers GitHub Actions to build `svgs.json` and deploy the updated static site.
-- **Local Development**: Run `python3 server.py` (live auto-sync) or build the static catalog anytime via `python3 server.py --build`.
+```bash
+python3 server.py --build
+```
+
+This regenerates `js/svg-library.js` with all artworks embedded. Commit and push — no CI needed.
 
 ---
 
 ## 🛠️ Tech Stack
 
 - **Frontend**: Vanilla HTML5, CSS3, JavaScript (no npm build steps or external dependencies).
-- **Backend**: Built-in Python 3 HTTP server (`server.py`).
-- **PWA Ready**: Installable webapp with standalone display.
+- **Backend**: Built-in Python 3 HTTP server (`server.py`) — only needed for the build step (`--bundle`), not for running the site.
+- **Static**: Works with `file://` — deploy anywhere (GitHub Pages, Netlify, Vercel, etc.).

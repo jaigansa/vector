@@ -191,7 +191,8 @@ def extract_sprite_symbols(content, fname, rel_path, cat_name, cat_slug, stat):
     return items
 
 
-def build(save_json=True):
+def _collect_svg_files():
+    """Walk svgs/ and return (svg_files, categories) — shared by build() and build_js_library()."""
     svg_files = []
     os.makedirs(SVG_DIR, exist_ok=True)
 
@@ -262,12 +263,26 @@ def build(save_json=True):
                 }
 
     categories = sorted(categories_dict.values(), key=lambda x: x["name"])
+    return svg_files, categories
+
+
+def _strip_svg_content(items):
+    """Return a copy of items with content/rawSpriteContent removed (metadata only)."""
+    stripped = []
+    for item in items:
+        s = {k: v for k, v in item.items() if k not in ("content", "rawSpriteContent")}
+        stripped.append(s)
+    return stripped
+
+
+def build(save_json=True):
+    svg_files, categories = _collect_svg_files()
 
     catalog = {
         "status": "ok",
         "count": len(svg_files),
         "categories": categories,
-        "svgs": svg_files
+        "svgs": _strip_svg_content(svg_files)
     }
 
     if save_json:
@@ -275,11 +290,74 @@ def build(save_json=True):
         try:
             with open(out_file, "w", encoding="utf-8") as f:
                 json.dump(catalog, f, indent=2)
-            print(f"✓ Generated svgs.json: {len(svg_files)} artworks across {len(categories)} categories.")
+            print(f"✓ Generated svgs.json (metadata only): {len(svg_files)} artworks across {len(categories)} categories.")
         except Exception as e:
             print(f"Error saving svgs.json: {e}", file=sys.stderr)
 
+    build_js_library(svg_files, categories)
+
     return catalog
+
+
+def build_js_library(svg_files, categories):
+    """Generate a single non-module SVG library bundle at js/svg-library.js.
+
+    Defines window.svgLibrary = { categories: [...], svgs: [...] }
+    so it works with file:// (no server, no ES modules needed).
+    """
+    def js_val(v):
+        if v is None:
+            return "null"
+        if isinstance(v, bool):
+            return "true" if v else "false"
+        if isinstance(v, (int, float)):
+            return str(v)
+        return json.dumps(v)
+
+    # Clean up old per-category assets
+    assets_dir = os.path.join(BASE_DIR, "js", "assets")
+    if os.path.isdir(assets_dir):
+        for fname in os.listdir(assets_dir):
+            if fname.startswith("svg-library-"):
+                os.remove(os.path.join(assets_dir, fname))
+
+    # Group by category for organized output (but all in one file)
+    by_category = {}
+    for item in svg_files:
+        slug = item.get("categorySlug") or "general"
+        by_category.setdefault(slug, []).append(item)
+
+    active_categories = [c for c in categories if c["slug"] in by_category]
+
+    lines = []
+    lines.append("// Auto-generated SVG library bundle — do not edit by hand")
+    lines.append("// Works with file:// — no server, no ES modules needed")
+    lines.append("")
+    lines.append("(function() {")
+    lines.append("  'use strict';")
+    lines.append("")
+    lines.append("  window.svgLibrary = {")
+    lines.append("    categories: " + json.dumps(active_categories) + ",")
+    lines.append("    svgs: [")
+    for i, item in enumerate(svg_files):
+        comma = "," if i < len(svg_files) - 1 else ""
+        lines.append("      {")
+        for key in ("id", "name", "path", "displayName", "content", "size", "viewBox", "width", "height", "category", "isSprite", "spriteFile", "symbolId", "rawSpriteContent", "mtime", "categorySlug"):
+            if key in item:
+                lines.append(f"        {key}: {js_val(item[key])},")
+        lines.append("      }" + comma)
+    lines.append("    ]")
+    lines.append("  };")
+    lines.append("")
+    lines.append("})();")
+
+    out_file = os.path.join(BASE_DIR, "js", "svg-library.js")
+    os.makedirs(os.path.dirname(out_file), exist_ok=True)
+    with open(out_file, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+
+    total = len(svg_files)
+    print(f"✓ Generated js/svg-library.js (single file, no modules): {total} artworks across {len(active_categories)} categories.")
 
 
 class ReusableTCPServer(socketserver.TCPServer):
@@ -292,19 +370,16 @@ class SVGViewerHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urlparse(self.path)
+
+        # Block direct access to raw SVG files under /svgs/ (library is bundled in js/svg-library.js)
+        clean_path = parsed.path.lstrip("/")
+        if clean_path.startswith("svgs/"):
+            self.send_error(404, "Not Found")
+            return
+
         if parsed.path == "/api/svgs":
             self.send_svg_list()
             return
-
-        # Check if direct request to /svgs/<filename>.svg should be resolved inside a category subfolder
-        clean_path = parsed.path.lstrip("/")
-        if clean_path.startswith("svgs/") and not os.path.exists(os.path.join(BASE_DIR, clean_path)):
-            filename = os.path.basename(clean_path)
-            for root, dirs, files in os.walk(SVG_DIR):
-                if filename in files:
-                    rel = os.path.relpath(os.path.join(root, filename), BASE_DIR).replace("\\", "/")
-                    self.path = "/" + rel
-                    break
 
         super().do_GET()
 

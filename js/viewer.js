@@ -3,8 +3,6 @@
  * Synchronized with interactive draw scrubber slider and automatic stroke animation.
  */
 
-import { resolveUseElements } from './export.js';
-
 const NEON_PALETTE = [
   { stroke: '#00f5ff', glow: 'rgba(0, 245, 255, 0.7)' },   // Electric Cyan
   { stroke: '#39ff14', glow: 'rgba(57, 255, 20, 0.7)' },   // Neon Lime
@@ -17,7 +15,7 @@ const NEON_PALETTE = [
   { stroke: '#ff0055', glow: 'rgba(255, 0, 85, 0.7)' }     // Neon Crimson
 ];
 
-export class SVGViewer {
+window.SVGViewer = class {
   constructor(app) {
     this.app = app;
     this.activeCard = null;

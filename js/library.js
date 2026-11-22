@@ -2,13 +2,11 @@
  * SVG Vector Artwork Library Loader & Metadata Parser
  */
 
-import { Storage } from './storage.js';
-
-export class SVGLibrary {
+window.SVGLibrary = class {
   constructor() {
     this.items = [];
     this.discoveredCategories = [];
-    this.hasApiServer = false;
+    this.loadedCategories = new Set();
   }
 
   isSVGSprite(content) {
@@ -156,51 +154,17 @@ export class SVGLibrary {
 
   async load() {
     let svgsFound = [];
-    const isLocal = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname) || window.location.port === '8080';
 
-    // 1. In local dev environment with python server, query API for live discovery
-    if (isLocal) {
-      try {
-        const res = await fetch('./api/svgs');
-        if (res.ok) {
-          const data = await res.json();
-          if (data?.svgs?.length > 0) {
-            data.svgs.forEach(item => {
-              svgsFound.push(...this.processSvgItem(item));
-            });
-            this.hasApiServer = true;
-          }
-          if (data?.categories) {
-            this.discoveredCategories = data.categories;
-          }
-        }
-      } catch {
-        this.hasApiServer = false;
-      }
-    }
+    // 1. Load categories from the bundled svgLibrary (no server, no modules)
+    this.discoveredCategories = window.svgLibrary?.categories || [];
 
-    // 2. On static hosting (e.g. GitHub Pages) or if local API server is unavailable, load static svgs.json
-    if (svgsFound.length === 0) {
-      try {
-        const res = await fetch('./svgs.json');
-        if (res.ok) {
-          const data = await res.json();
-          if (data?.svgs?.length > 0) {
-            data.svgs.forEach(item => {
-              svgsFound.push(...this.processSvgItem(item));
-            });
-          }
-          if (data?.categories) {
-            this.discoveredCategories = data.categories;
-          }
-        }
-      } catch {
-        // Fallback below
-      }
-    }
+    // 2. Load all SVGs from the bundle
+    (window.svgLibrary?.svgs || []).forEach(item => {
+      svgsFound.push(...this.processSvgItem(item));
+    });
 
     // 3. Merge in any user uploads from local storage
-    const userUploads = Storage.getUserUploads();
+    const userUploads = window.Storage.getUserUploads();
     if (userUploads?.length > 0) {
       for (const upload of userUploads) {
         const processed = this.processSvgItem(upload);

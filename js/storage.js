@@ -6,7 +6,7 @@ const STORAGE_KEYS = {
   UPLOADS: 'vector_user_uploads_v1'
 };
 
-export const Storage = {
+window.Storage = {
   getUserUploads() {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.UPLOADS);

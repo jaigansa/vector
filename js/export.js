@@ -2,7 +2,7 @@
  * Export Utilities for SVG Vector Artworks (SVG, DXF, PNG)
  */
 
-export const SVGExporter = {
+window.SVGExporter = {
   downloadSVG(item, customContent = null) {
     const content = customContent || item.content;
     const blob = new Blob([content], { type: 'image/svg+xml;charset=utf-8' });
@@ -109,7 +109,7 @@ export const SVGExporter = {
 /**
  * Resolve <use> elements into inline elements
  */
-export function resolveUseElements(svg) {
+window.resolveUseElements = function(svg) {
   let depth = 0;
   while (depth < 5) {
     const useElements = Array.from(svg.querySelectorAll('use'));
@@ -164,7 +164,7 @@ export function resolveUseElements(svg) {
 /**
  * Universal AutoCAD R12 ASCII DXF Exporter for CNC Plotters, Lasers, and Vinyl Cutters
  */
-export function convertSVGToDXF(svgString, width = 800, height = 600) {
+window.convertSVGToDXF = function(svgString, width = 800, height = 600) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(svgString, 'image/svg+xml');
   const svg = doc.querySelector('svg');
