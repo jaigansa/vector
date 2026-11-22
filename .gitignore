@@ -14,4 +14,4 @@ Thumbs.db
 node_modules/
 
 # Eleventy output
-_site/
+docs/
